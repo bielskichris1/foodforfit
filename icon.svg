@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Dunkler Hintergrund, vollflächig (maskable-tauglich) -->
+  <rect width="512" height="512" fill="#0f172a"/>
+
+  <!-- Makro-Ring: Eiweiß (grün), Kohlenhydrate (blau), Fett (rot) -->
+  <g fill="none" stroke-width="36" stroke-linecap="round" transform="rotate(-90 256 256)">
+    <circle cx="256" cy="256" r="150" stroke="#10b981" stroke-dasharray="300 642.5" stroke-dashoffset="0"/>
+    <circle cx="256" cy="256" r="150" stroke="#0ea5e9" stroke-dasharray="250 692.5" stroke-dashoffset="-370"/>
+    <circle cx="256" cy="256" r="150" stroke="#f43f5e" stroke-dasharray="182 760.5" stroke-dashoffset="-690"/>
+  </g>
+
+  <!-- Teller -->
+  <circle cx="256" cy="256" r="118" fill="#ffffff"/>
+  <circle cx="256" cy="256" r="98" fill="none" stroke="#e2e8f0" stroke-width="6"/>
+
+  <!-- Gabel -->
+  <g fill="#0f172a">
+    <rect x="207" y="188" width="6" height="44" rx="3"/>
+    <rect x="221" y="188" width="6" height="44" rx="3"/>
+    <rect x="235" y="188" width="6" height="44" rx="3"/>
+    <rect x="207" y="222" width="34" height="24" rx="12"/>
+    <rect x="219" y="238" width="10" height="82" rx="5"/>
+    <!-- Messer -->
+    <path d="M287 188 C312 194 316 236 297 268 L287 268 Z"/>
+    <rect x="287" y="260" width="10" height="60" rx="5"/>
+  </g>
+</svg>

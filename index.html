@@ -1,0 +1,3784 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Essensplan Tracker</title>
+  <meta name="description" content="Kalorien- und Makro-Tracker mit Foto-Scan für Nährwerttabellen" />
+  <meta name="theme-color" id="meta-theme-color" content="#059669" />
+  <script>
+    (function () {
+      var dark = false;
+      try {
+        var pref = window.localStorage.getItem('essensplan_theme');
+        dark = pref === 'dark' || (pref !== 'light' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      } catch (e) {}
+      document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+      var m = document.getElementById('meta-theme-color');
+      if (m) m.setAttribute('content', dark ? '#0b1220' : '#059669');
+    })();
+  </script>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="icon.svg" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Essensplan" />
+  <style>
+    :root {
+      --bg-page: #f8fafc;
+      --bg-card: #ffffff;
+      --bg-subtle: #f1f5f9;
+      --border: #e2e8f0;
+      --border-strong: #cbd5e1;
+      --text-main: #0f172a;
+      --text-secondary: #334155;
+      --text-muted: #64748b;
+      --emerald: #059669;
+      --emerald-hover: #047857;
+      --emerald-soft: #ecfdf5;
+      --emerald-border: #a7f3d0;
+      --amber: #d97706;
+      --amber-soft: #fffbeb;
+      --amber-border: #fde68a;
+      --sky: #0284c7;
+      --sky-soft: #f0f9ff;
+      --sky-border: #bae6fd;
+      --violet: #7c3aed;
+      --violet-soft: #f5f3ff;
+      --violet-border: #ddd6fe;
+      --rose: #e11d48;
+      --rose-soft: #fff1f2;
+      --rose-border: #fecdd3;
+      --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+      --shadow-md: 0 8px 20px rgba(15, 23, 42, 0.12);
+      --emerald-solid: #059669;
+      --track: #e2e8f0;
+      --hover-neutral: #e2e8f0;
+      --hover-emerald: #d1fae5;
+      --hover-amber: #fef3c7;
+      --hover-rose: #ffe4e6;
+      --hover-sky: #e0f2fe;
+      --notice-info: #0369a1;
+      --notice-success: #065f46;
+      --notice-error: #9f1239;
+      --notice-warn: #92400e;
+      --toast-bg: #0f172a;
+      --toast-text: #ffffff;
+      --toast-action: #6ee7b7;
+      --overlay: rgba(15, 23, 42, 0.55);
+      --focus-ring: rgba(5, 150, 105, 0.12);
+      color-scheme: light;
+      --radius-lg: 16px;
+      --radius-md: 12px;
+      --radius-sm: 8px;
+    }
+
+    :root[data-theme="dark"] {
+      --bg-page: #0b1220;
+      --bg-card: #111a2e;
+      --bg-subtle: #172036;
+      --border: #24304a;
+      --border-strong: #35446a;
+      --text-main: #e8edf6;
+      --text-secondary: #c3cde0;
+      --text-muted: #94a3b8;
+      --emerald: #34d399;
+      --emerald-hover: #047857;
+      --emerald-soft: #0f2d2a;
+      --emerald-border: #1f5c4e;
+      --amber: #fbbf24;
+      --amber-soft: #2a2314;
+      --amber-border: #5c4a1c;
+      --sky: #38bdf8;
+      --sky-soft: #0f2536;
+      --sky-border: #1d4a68;
+      --violet: #a78bfa;
+      --violet-soft: #231d3d;
+      --violet-border: #473a80;
+      --rose: #fb7185;
+      --rose-soft: #301620;
+      --rose-border: #6b2a3c;
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+      --shadow-md: 0 8px 20px rgba(0, 0, 0, 0.55);
+      --track: #24304a;
+      --hover-neutral: #24304a;
+      --hover-emerald: #14403b;
+      --hover-amber: #38301a;
+      --hover-rose: #43202c;
+      --hover-sky: #16344b;
+      --notice-info: #7dd3fc;
+      --notice-success: #6ee7b7;
+      --notice-error: #fda4af;
+      --notice-warn: #fcd34d;
+      --toast-bg: #e8edf6;
+      --toast-text: #0f172a;
+      --toast-action: #047857;
+      --overlay: rgba(0, 0, 0, 0.7);
+      --focus-ring: rgba(52, 211, 153, 0.22);
+      color-scheme: dark;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      min-height: 100%;
+      background-color: var(--bg-page);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.45;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+      font-variant-numeric: tabular-nums;
+    }
+
+    button, input, select, textarea {
+      font-family: inherit;
+      color: inherit;
+      font-variant-numeric: tabular-nums;
+    }
+
+    button {
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      cursor: pointer;
+      border: none;
+      background: none;
+      transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+    }
+
+    button:active {
+      transform: scale(0.985);
+    }
+
+    .app-shell {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: calc(14px + env(safe-area-inset-top, 0px)) calc(14px + env(safe-area-inset-right, 0px)) calc(84px + env(safe-area-inset-bottom, 0px)) calc(14px + env(safe-area-inset-left, 0px));
+    }
+
+    /* Header & Date Bar */
+    .header-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .brand {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 11px;
+    }
+
+    .brand-logo {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: var(--emerald-solid);
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 2px 6px rgba(5, 150, 105, 0.28);
+    }
+
+    .brand h1 {
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: -0.015em;
+      color: var(--text-main);
+    }
+
+    .brand p {
+      font-size: 0.76rem;
+      color: var(--text-muted);
+    }
+
+    .header-btns {
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .theme-toggle {
+      width: 44px;
+      height: 44px;
+      flex-shrink: 0;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+    }
+
+    .theme-toggle:hover {
+      background: var(--hover-neutral);
+    }
+
+    /* Zeigt das Symbol des Modus, zu dem ein Tipp wechselt */
+    .theme-toggle .tt-sun,
+    .theme-toggle .tt-moon {
+      display: none;
+    }
+
+    :root[data-theme="light"] .theme-toggle .tt-moon {
+      display: flex;
+      color: var(--text-secondary);
+    }
+
+    :root[data-theme="dark"] .theme-toggle .tt-sun {
+      display: flex;
+      color: var(--amber);
+    }
+
+    .btn-pill-emerald {
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      background: var(--emerald-soft);
+      border: 1px solid var(--emerald-border);
+      color: var(--emerald);
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    .btn-pill-emerald:hover {
+      background: var(--hover-emerald);
+    }
+
+    .btn-pill-amber {
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      background: var(--amber-soft);
+      border: 1px solid var(--amber-border);
+      color: var(--amber);
+      font-size: 0.78rem;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-pill-amber:hover {
+      background: var(--hover-amber);
+    }
+
+    .date-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 6px;
+      gap: 8px;
+    }
+
+    .date-arrow {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .date-arrow:hover {
+      background: var(--hover-neutral);
+    }
+
+    .date-center {
+      flex: 1;
+      text-align: center;
+      min-width: 0;
+    }
+
+    .date-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .date-title {
+      font-size: 0.96rem;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .badge-today {
+      font-size: 0.66rem;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--emerald-soft);
+      color: var(--emerald);
+      border: 1px solid var(--emerald-border);
+      letter-spacing: 0.04em;
+    }
+
+    .date-native-input {
+      margin-top: 2px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.76rem;
+      text-align: center;
+      cursor: pointer;
+    }
+
+    /* Navigation Tabs */
+    .nav-tabs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      padding: 6px;
+      margin-bottom: 14px;
+    }
+
+    .nav-tab-btn {
+      padding: 11px 8px;
+      border-radius: var(--radius-md);
+      font-size: 0.83rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .nav-tab-btn:hover {
+      background: var(--bg-subtle);
+      color: var(--text-main);
+    }
+
+    .nav-tab-btn.active {
+      background: var(--emerald-solid);
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(5, 150, 105, 0.25);
+    }
+
+    .tab-section {
+      display: none;
+    }
+
+    .tab-section.active {
+      display: block;
+    }
+
+    /* Cards & Buttons */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .card-title {
+      font-size: 0.8rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+
+    .action-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    @media (max-width: 540px) {
+      .action-grid-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .btn {
+      min-height: 44px;
+      padding: 11px 14px;
+      border-radius: var(--radius-md);
+      font-size: 0.85rem;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: var(--emerald-solid);
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(5, 150, 105, 0.22);
+    }
+
+    .btn-primary:hover {
+      background: var(--emerald-hover);
+    }
+
+    .btn-amber {
+      background: #f59e0b;
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(245, 158, 11, 0.22);
+    }
+
+    .btn-amber:hover {
+      background: #d97706;
+    }
+
+    .btn-outline {
+      background: var(--bg-card);
+      border: 1px solid var(--border-strong);
+      color: var(--text-main);
+    }
+
+    .btn-outline:hover {
+      background: var(--bg-subtle);
+    }
+
+    .btn-danger {
+      background: var(--rose-soft);
+      border: 1px solid var(--rose-border);
+      color: var(--rose);
+    }
+
+    .btn-danger:hover {
+      background: var(--hover-rose);
+    }
+
+    .btn-sm {
+      padding: 7px 11px;
+      border-radius: var(--radius-sm);
+      font-size: 0.76rem;
+      font-weight: 700;
+    }
+
+    /* Activity & Strength Card */
+    .activity-card {
+      background: linear-gradient(180deg, var(--amber-soft) 0%, var(--bg-card) 48%);
+      border: 1px solid var(--amber-border);
+    }
+
+    .activity-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    /* 5 Macro Cards */
+    .macro-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    @media (max-width: 540px) {
+      .macro-cards-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .macro-card {
+      background: var(--bg-page);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 13px;
+    }
+
+    .macro-card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+
+    .macro-label {
+      font-size: 0.74rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .lbl-kcal { color: var(--amber); }
+    .lbl-ew { color: var(--emerald); }
+    .lbl-kh { color: var(--sky); }
+    .lbl-sugar { color: var(--violet); }
+    .lbl-fat { color: var(--rose); }
+
+    .macro-pct {
+      font-size: 0.74rem;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    .macro-val {
+      font-size: 1.12rem;
+      font-weight: 800;
+      color: var(--text-main);
+      margin-bottom: 7px;
+    }
+
+    .macro-val small {
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    .bar-track {
+      width: 100%;
+      height: 8px;
+      background: var(--track);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 6px;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.25s ease;
+    }
+
+    .fill-kcal { background: #f59e0b; }
+    .fill-ew { background: var(--emerald); }
+    .fill-kh { background: var(--sky); }
+    .fill-sugar { background: #8b5cf6; }
+    .fill-fat { background: var(--rose); }
+
+    .macro-rest {
+      font-size: 0.76rem;
+      font-weight: 700;
+    }
+
+    /* Meal List */
+    .meal-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .meal-row {
+      background: var(--bg-page);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 13px 14px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .meal-main {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .meal-name {
+      font-size: 0.94rem;
+      font-weight: 800;
+      color: var(--text-main);
+      margin-bottom: 6px;
+      word-break: break-word;
+    }
+
+    .meal-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .pill {
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+    }
+
+    .pill-kcal { color: var(--amber); background: var(--amber-soft); border-color: var(--amber-border); }
+    .pill-fat { color: var(--rose); background: var(--rose-soft); border-color: var(--rose-border); }
+    .pill-kh { color: var(--sky); background: var(--sky-soft); border-color: var(--sky-border); }
+    .pill-sugar { color: var(--violet); background: var(--violet-soft); border-color: var(--violet-border); }
+    .pill-ew { color: var(--emerald); background: var(--emerald-soft); border-color: var(--emerald-border); }
+
+    .meal-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .icon-btn-edit, .icon-btn-del {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .icon-btn-edit {
+      background: var(--sky-soft);
+      border: 1px solid var(--sky-border);
+      color: var(--sky);
+    }
+
+    .icon-btn-edit:hover {
+      background: var(--hover-sky);
+    }
+
+    .icon-btn-del {
+      background: var(--rose-soft);
+      border: 1px solid var(--rose-border);
+      color: var(--rose);
+    }
+
+    .icon-btn-del:hover {
+      background: var(--hover-rose);
+    }
+
+    .empty-box {
+      text-align: center;
+      padding: 22px 16px;
+      border: 1px dashed var(--border-strong);
+      border-radius: var(--radius-md);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    /* Google Notes Export Preview Box */
+    .notes-textarea {
+      width: 100%;
+      min-height: 158px;
+      padding: 12px;
+      border-radius: var(--radius-md);
+      background: var(--bg-page);
+      border: 1px solid var(--border-strong);
+      color: var(--text-main);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.77rem;
+      line-height: 1.55;
+      resize: vertical;
+    }
+
+    .notes-textarea:focus {
+      outline: none;
+      border-color: var(--emerald);
+    }
+
+    /* Forms & Inputs */
+    .form-grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .form-grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    @media (max-width: 540px) {
+      .form-grid-2, .form-grid-3 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      margin-bottom: 10px;
+    }
+
+    .field label {
+      font-size: 0.76rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+    }
+
+    .input {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-page);
+      border: 1px solid var(--border-strong);
+      color: var(--text-main);
+      font-size: 0.92rem;
+    }
+
+    .input:focus {
+      outline: none;
+      border-color: var(--emerald);
+      background: var(--bg-card);
+      box-shadow: 0 0 0 3px var(--focus-ring);
+    }
+
+    .input-flash {
+      border-color: var(--emerald) !important;
+      background: var(--emerald-soft) !important;
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 9px 11px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      margin-bottom: 12px;
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+    }
+
+    .checkbox-row input[type="checkbox"] {
+      width: 17px;
+      height: 17px;
+      accent-color: var(--emerald);
+      cursor: pointer;
+    }
+
+    .segment-switch {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 5px;
+      margin-bottom: 12px;
+    }
+
+    .segment-btn {
+      padding: 9px 10px;
+      border-radius: var(--radius-sm);
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    .segment-btn.active {
+      background: var(--bg-card);
+      color: var(--emerald);
+      border: 1px solid var(--emerald-border);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .calc-preview-panel {
+      background: var(--emerald-soft);
+      border: 1px solid var(--emerald-border);
+      border-radius: var(--radius-md);
+      padding: 12px;
+      margin: 12px 0;
+    }
+
+    .calc-preview-head {
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--emerald);
+      margin-bottom: 6px;
+    }
+
+    /* Gemini Vision Scanner Card */
+    .scanner-card {
+      background: linear-gradient(180deg, var(--emerald-soft) 0%, var(--bg-card) 42%);
+      border: 1px solid var(--emerald-border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+
+    .badge-vision {
+      display: inline-block;
+      font-size: 0.68rem;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--emerald-solid);
+      color: #ffffff;
+      margin-bottom: 5px;
+      letter-spacing: 0.03em;
+    }
+
+    .camera-box {
+      margin-top: 12px;
+      background: #0f172a;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      border: 2px solid var(--emerald);
+    }
+
+    .camera-video-wrap {
+      position: relative;
+      width: 100%;
+    }
+
+    .camera-video-wrap video {
+      width: 100%;
+      max-height: 290px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .camera-guide {
+      position: absolute;
+      inset: 14px;
+      border: 2px dashed rgba(255, 255, 255, 0.85);
+      border-radius: 10px;
+      pointer-events: none;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding-bottom: 8px;
+    }
+
+    .camera-guide span {
+      background: rgba(15, 23, 42, 0.84);
+      color: #ffffff;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 999px;
+    }
+
+    .camera-bar {
+      display: flex;
+      gap: 8px;
+      padding: 10px;
+      background: #1e293b;
+    }
+
+    .scan-preview-card {
+      margin-top: 12px;
+      background: var(--bg-page);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 12px;
+      text-align: center;
+    }
+
+    .scan-preview-card img {
+      max-width: 100%;
+      max-height: 220px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      object-fit: contain;
+      margin-bottom: 10px;
+    }
+
+    .notice-box {
+      margin-top: 10px;
+      padding: 11px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 0.8rem;
+      line-height: 1.45;
+    }
+
+    .notice-info {
+      background: var(--sky-soft);
+      border: 1px solid var(--sky-border);
+      color: var(--notice-info);
+    }
+
+    .notice-success {
+      background: var(--emerald-soft);
+      border: 1px solid var(--emerald-border);
+      color: var(--notice-success);
+    }
+
+    .notice-error {
+      background: var(--rose-soft);
+      border: 1px solid var(--rose-border);
+      color: var(--notice-error);
+    }
+
+    /* Favorites */
+    .fav-card {
+      background: var(--bg-page);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 12px;
+      margin-bottom: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .fav-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .fav-title {
+      font-size: 0.9rem;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .fav-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 2px;
+    }
+
+    /* Toast & Modals */
+    .toast {
+      position: fixed;
+      bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--toast-bg);
+      color: var(--toast-text);
+      padding: 11px 18px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      box-shadow: var(--shadow-md);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      z-index: 9999;
+      max-width: 92vw;
+      text-align: center;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .toast {
+      width: max-content;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .toast.has-action {
+      pointer-events: auto;
+    }
+
+    .toast-action {
+      color: var(--toast-action);
+      font-size: 0.82rem;
+      font-weight: 800;
+      padding: 6px 8px;
+      margin: -6px -8px -6px 0;
+      border-radius: 999px;
+      flex-shrink: 0;
+    }
+
+    #scan-notice,
+    #apikey-test-notice {
+      white-space: pre-line;
+    }
+
+    .notice-warn {
+      background: var(--amber-soft);
+      border: 1px solid var(--amber-border);
+      color: var(--notice-warn);
+    }
+
+    .backup-banner {
+      margin-top: 0;
+      margin-bottom: 14px;
+    }
+
+    .backup-banner-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    /* Wochenübersicht */
+    .week-avgs {
+      margin-bottom: 10px;
+    }
+
+    .week-sub {
+      font-size: 0.74rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    .week-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .week-row {
+      display: grid;
+      grid-template-columns: 62px 1fr auto;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      min-height: 44px;
+      padding: 8px 10px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-page);
+      border: 1px solid var(--border);
+      text-align: left;
+      font: inherit;
+    }
+
+    .week-row.current {
+      border-color: var(--emerald);
+      background: var(--emerald-soft);
+    }
+
+    .week-row.empty {
+      opacity: 0.6;
+    }
+
+    .week-day {
+      font-size: 0.78rem;
+      font-weight: 800;
+      color: var(--text-secondary);
+    }
+
+    .week-bar {
+      display: block;
+      height: 8px;
+      background: var(--track);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .week-bar-fill {
+      display: block;
+      height: 100%;
+      background: #f59e0b;
+      border-radius: 999px;
+    }
+
+    .week-bar-fill.over {
+      background: var(--rose);
+    }
+
+    .week-vals {
+      font-size: 0.74rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--overlay);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 9998;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      padding: 18px;
+      max-width: 460px;
+      width: 100%;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <!-- TOP HEADER & DATUMSAUSWAHL -->
+    <header class="header-card">
+      <div class="header-top">
+        <div class="brand">
+          <div class="brand-logo" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 20V10" />
+              <path d="M18 20V4" />
+              <path d="M6 20v-4" />
+            </svg>
+          </div>
+          <div>
+            <h1>Essensplan Tracker</h1>
+            <p>Bodyscan-Makros &amp; Gemini Vision</p>
+          </div>
+        </div>
+        <button type="button" id="btn-theme-toggle" class="theme-toggle" aria-label="Farbschema wechseln" title="Hell / Dunkel">
+          <span class="tt-sun" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="4" />
+              <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+            </svg>
+          </span>
+          <span class="tt-moon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
+            </svg>
+          </span>
+        </button>
+      </div>
+      <div class="header-btns">
+        <button type="button" id="btn-jump-today" class="btn-pill-emerald">Heute</button>
+      </div>
+
+      <div class="date-bar">
+        <button type="button" id="btn-prev-day" class="date-arrow" aria-label="Vortag" title="Vortag">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+        </button>
+
+        <div class="date-center">
+          <div class="date-title-row">
+            <span id="display-date-label" class="date-title">&nbsp;</span>
+            <span id="today-badge" class="badge-today hidden">HEUTE</span>
+          </div>
+          <input type="date" id="date-picker" class="date-native-input" value="" aria-label="Datum wählen" />
+        </div>
+
+        <button type="button" id="btn-next-day" class="date-arrow" aria-label="Folgetag" title="Folgetag">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- 3 NAVIGATION TABS -->
+    <nav class="nav-tabs" aria-label="Hauptnavigation">
+      <button type="button" class="nav-tab-btn active" data-tab="tab-plan">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+          <line x1="16" y1="2" x2="16" y2="6" />
+          <line x1="8" y1="2" x2="8" y2="6" />
+          <line x1="3" y1="10" x2="21" y2="10" />
+        </svg>
+        <span>Tagesplan</span>
+      </button>
+
+      <button type="button" class="nav-tab-btn" data-tab="tab-add">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="8" x2="12" y2="16" />
+          <line x1="8" y1="12" x2="16" y2="12" />
+        </svg>
+        <span>Hinzufügen &amp; Scan</span>
+      </button>
+
+      <button type="button" class="nav-tab-btn" data-tab="tab-settings">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3" />
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+        </svg>
+        <span>Ziele &amp; Backup</span>
+      </button>
+    </nav>
+
+    <!-- ===================================================================== -->
+    <!-- TAB 1: TAGESPLAN                                                      -->
+    <!-- ===================================================================== -->
+    <section id="tab-plan" class="tab-section active">
+      <div id="backup-banner" class="notice-box notice-warn backup-banner hidden">
+        <div id="backup-banner-text"></div>
+        <div class="backup-banner-actions">
+          <button type="button" id="btn-backup-now" class="btn-sm btn-primary">Jetzt sichern</button>
+          <button type="button" id="btn-backup-snooze" class="btn-sm btn-outline">Später erinnern</button>
+        </div>
+      </div>
+
+      <!-- Aktivitätskalorien & Krafttraining Card -->
+      <div class="card activity-card">
+        <div class="card-head">
+          <div>
+            <h2 class="card-title" style="color: var(--amber);">Aktivität &amp; Krafttraining (Tagesanpassung)</h2>
+            <p style="font-size: 0.77rem; color: var(--text-secondary); margin-top: 2px;">
+              Im Basis-Ziel (<span id="base-goal-inline">2900,0</span> kcal) sind <span id="base-act-inline">1100,0</span> kcal Alltagsaktivität einkalkuliert. Krafttraining wird 1:1 addiert.
+            </p>
+          </div>
+          <button type="button" id="btn-reset-day-activity" class="btn-sm btn-outline">Tag zurücksetzen</button>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="field" style="margin-bottom: 6px;">
+            <label for="day-activity-input">Aktivitätskalorien (kcal)</label>
+            <input type="text" inputmode="decimal" id="day-activity-input" class="input" value="1100" />
+          </div>
+          <div class="field" style="margin-bottom: 6px;">
+            <label for="day-strength-input">Krafttraining (kcal)</label>
+            <input type="text" inputmode="decimal" id="day-strength-input" class="input" value="0" />
+          </div>
+        </div>
+
+        <div class="activity-badges">
+          <span id="badge-act-diff" class="pill pill-kcal">Aktivitäts-Differenz: +0,0 kcal</span>
+          <span id="badge-str-bonus" class="pill pill-ew">Krafttraining: +0,0 kcal</span>
+          <span id="badge-eff-goal" class="pill" style="font-weight: 800; color: var(--text-main);">Effektives Ziel: 2900,0 kcal</span>
+        </div>
+      </div>
+
+      <!-- 5 Makro-Karten -->
+      <div class="card">
+        <div class="card-head">
+          <h2 class="card-title">Bodyscan-Tagesbilanz</h2>
+          <span id="summary-badge" style="font-size: 0.76rem; font-weight: 800; color: var(--emerald);">1 % kcal erreicht</span>
+        </div>
+
+        <div class="macro-cards-grid">
+          <!-- Kalorien -->
+          <div class="macro-card">
+            <div class="macro-card-top">
+              <span class="macro-label lbl-kcal">Kalorien (kcal)</span>
+              <span id="pct-kcal" class="macro-pct">1 %</span>
+            </div>
+            <div class="macro-val"><span id="val-kcal">40,0</span> <small>/ <span id="goal-kcal">2900,0</span> kcal</small></div>
+            <div class="bar-track">
+              <div id="bar-kcal" class="bar-fill fill-kcal" style="width: 1.4%;"></div>
+            </div>
+            <div id="rem-kcal" class="macro-rest lbl-kcal">Rest: 2860,0 kcal</div>
+          </div>
+
+          <!-- Eiweiß -->
+          <div class="macro-card">
+            <div class="macro-card-top">
+              <span class="macro-label lbl-ew">Eiweiß (EW)</span>
+              <span id="pct-ew" class="macro-pct">5 %</span>
+            </div>
+            <div class="macro-val"><span id="val-ew">10,00</span> <small>/ <span id="goal-ew">220,00</span> g</small></div>
+            <div class="bar-track">
+              <div id="bar-ew" class="bar-fill fill-ew" style="width: 4.5%;"></div>
+            </div>
+            <div id="rem-ew" class="macro-rest lbl-ew">Rest: 210,00 g</div>
+          </div>
+
+          <!-- Kohlenhydrate -->
+          <div class="macro-card">
+            <div class="macro-card-top">
+              <span class="macro-label lbl-kh">Kohlenhydrate</span>
+              <span id="pct-kh" class="macro-pct">0 %</span>
+            </div>
+            <div class="macro-val"><span id="val-kh">0,00</span> <small>/ <span id="goal-kh">330,00</span> g</small></div>
+            <div class="bar-track">
+              <div id="bar-kh" class="bar-fill fill-kh" style="width: 0%;"></div>
+            </div>
+            <div id="rem-kh" class="macro-rest lbl-kh">Rest: 330,00 g</div>
+          </div>
+
+          <!-- davon Zucker -->
+          <div class="macro-card">
+            <div class="macro-card-top">
+              <span class="macro-label lbl-sugar">davon Zucker</span>
+              <span id="pct-sugar" class="macro-pct">0 %</span>
+            </div>
+            <div class="macro-val"><span id="val-sugar">0,00</span> <small>/ <span id="goal-sugar">70,00</span> g</small></div>
+            <div class="bar-track">
+              <div id="bar-sugar" class="bar-fill fill-sugar" style="width: 0%;"></div>
+            </div>
+            <div id="rem-sugar" class="macro-rest lbl-sugar">Rest: 70,00 g</div>
+          </div>
+
+          <!-- Fett -->
+          <div class="macro-card">
+            <div class="macro-card-top">
+              <span class="macro-label lbl-fat">Fett</span>
+              <span id="pct-fat" class="macro-pct">0 %</span>
+            </div>
+            <div class="macro-val"><span id="val-fat">0,00</span> <small>/ <span id="goal-fat">70,00</span> g</small></div>
+            <div class="bar-track">
+              <div id="bar-fat" class="bar-fill fill-fat" style="width: 0%;"></div>
+            </div>
+            <div id="rem-fat" class="macro-rest lbl-fat">Rest: 70,00 g</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Liste der eingetragenen Mahlzeiten -->
+      <div class="card">
+        <div class="card-head">
+          <h2 class="card-title">Mahlzeiten (<span id="meals-count">1</span>)</h2>
+          <button type="button" id="btn-open-add-tab" class="btn-sm btn-primary">+ Mahlzeit / Foto-Scan</button>
+        </div>
+
+        <div id="meals-list" class="meal-list">
+          <div class="meal-row">
+            <div class="meal-main">
+              <div class="meal-name">Morgenroutine: Wellmix EAA + Aldi Sports Creatin Orange</div>
+              <div class="meal-pills">
+                <span class="pill pill-kcal">40,0 kcal</span>
+                <span class="pill pill-fat">0,00 g Fett</span>
+                <span class="pill pill-kh">0,00 g KH (davon 0,00 g Zucker)</span>
+                <span class="pill pill-ew">10,00 g EW</span>
+              </div>
+            </div>
+            <div class="meal-actions">
+              <button type="button" class="icon-btn-edit" data-edit-meal="entry-init-20261122" aria-label="Mahlzeit bearbeiten" title="Bearbeiten">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
+              </button>
+              <button type="button" class="icon-btn-del" data-del-meal="entry-init-20261122" aria-label="Mahlzeit löschen" title="Löschen">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Wochenübersicht -->
+      <div class="card" id="week-card">
+        <div class="card-head">
+          <h2 class="card-title">Wochenübersicht <span id="week-sub" class="week-sub"></span></h2>
+        </div>
+        <div id="week-avgs" class="meal-pills week-avgs"></div>
+        <div id="week-rows" class="week-rows"></div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- TAB 2: HINZUFÜGEN & GEMINI VISION SCANNER                             -->
+    <!-- ===================================================================== -->
+    <section id="tab-add" class="tab-section">
+      <div class="action-grid-2" style="grid-template-columns: 1fr;">
+        <button type="button" id="btn-add-mr" class="btn btn-outline">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          <span>Morgenroutine einfügen</span>
+        </button>
+      </div>
+
+      <!-- Reiner Gemini 2.5 Flash Vision Foto-Scanner (ohne OCR) -->
+      <div class="scanner-card">
+        <div class="card-head" style="margin-bottom: 4px;">
+          <div>
+            <span class="badge-vision">GEMINI VISION</span>
+            <h2 class="card-title" style="color: var(--text-main);">Nährwerttabelle per Foto auslesen</h2>
+          </div>
+          <button type="button" id="btn-clear-scan" class="btn-sm btn-outline hidden">Foto entfernen</button>
+        </div>
+        <p style="font-size: 0.8rem; color: var(--text-secondary);">
+          Fotografiere die Nährwerttabelle per Live-Kamera ab oder wähle ein Bild aus deiner Galerie. Gemini überträgt Name, Bezugsgröße, kcal (ohne kJ), Fett, KH, Zucker und EW direkt in den Rechner.
+        </p>
+
+        <div class="action-grid-2" style="margin-top: 12px; margin-bottom: 0;">
+          <button type="button" id="btn-start-camera" class="btn btn-primary">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+              <circle cx="12" cy="13" r="4" />
+            </svg>
+            <span>Live-Kamera öffnen</span>
+          </button>
+
+          <label for="gallery-upload-input" class="btn btn-outline" style="cursor: pointer;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <circle cx="8.5" cy="8.5" r="1.5" />
+              <polyline points="21 15 16 10 5 21" />
+            </svg>
+            <span>Bild aus Galerie wählen</span>
+          </label>
+          <input type="file" id="gallery-upload-input" accept="image/*" class="hidden" />
+        </div>
+
+        <!-- Inline Live Camera Viewfinder -->
+        <div id="camera-box" class="camera-box hidden">
+          <div class="camera-video-wrap">
+            <video id="camera-video" autoplay playsinline muted></video>
+            <div class="camera-guide">
+              <span>Nährwerttabelle im Rahmen ausrichten</span>
+            </div>
+          </div>
+          <div class="camera-bar">
+            <button type="button" id="btn-stop-camera" class="btn btn-outline" style="flex: 1;">Abbrechen</button>
+            <button type="button" id="btn-capture-photo" class="btn btn-primary" style="flex: 2;">Foto aufnehmen &amp; scannen</button>
+          </div>
+        </div>
+
+        <!-- Foto-Vorschau -->
+        <div id="scan-preview-card" class="scan-preview-card hidden">
+          <img id="scan-preview-img" src="" alt="Vorschau Nährwerttabelle" />
+          <div style="display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;">
+            <button type="button" id="btn-retry-gemini" class="btn-sm btn-primary">Erneut mit Gemini scannen</button>
+            <button type="button" id="btn-open-key-settings" class="btn-sm btn-outline">API-Key in Ziele &amp; Backup</button>
+          </div>
+        </div>
+
+        <div id="scan-notice" class="notice-box notice-info hidden"></div>
+      </div>
+
+      <!-- Exakter Etiketten- & Portionsrechner -->
+      <div class="card" id="calculator-card">
+        <div class="card-head">
+          <h2 class="card-title" id="calc-heading">Exakter Etiketten- &amp; Portionsrechner</h2>
+          <button type="button" id="btn-cancel-edit" class="btn-sm btn-danger hidden">Bearbeitung abbrechen</button>
+        </div>
+
+        <div class="segment-switch">
+          <button type="button" id="mode-100g" class="segment-btn active">Pro 100 g / 100 ml</button>
+          <button type="button" id="mode-portion" class="segment-btn">Pro Portion</button>
+        </div>
+
+        <form id="calc-form">
+          <div class="field">
+            <label for="calc-name">Bezeichnung der Mahlzeit / Zutat *</label>
+            <input type="text" id="calc-name" class="input" required placeholder="z. B. Skyr Natur oder Hähnchenbrust" />
+          </div>
+
+          <div class="form-grid-2">
+            <div class="field">
+              <label id="lbl-ref-amount" for="calc-ref-amount">Referenzmenge auf Etikett (g / ml)</label>
+              <input type="text" inputmode="decimal" id="calc-ref-amount" class="input" value="100" />
+            </div>
+            <div class="field">
+              <label id="lbl-actual-amount" for="calc-actual-amount">Abgewogenes Gewicht in g *</label>
+              <input type="text" inputmode="decimal" id="calc-actual-amount" class="input" value="100" />
+            </div>
+          </div>
+
+          <div class="form-grid-3">
+            <div class="field">
+              <label for="calc-kcal" style="color: var(--amber);">Kalorien (kcal) *</label>
+              <input type="text" inputmode="decimal" id="calc-kcal" class="input" placeholder="0,0" />
+            </div>
+            <div class="field">
+              <label for="calc-fat" style="color: var(--rose);">Fett (g) *</label>
+              <input type="text" inputmode="decimal" id="calc-fat" class="input" placeholder="0,00" />
+            </div>
+            <div class="field">
+              <label for="calc-carbs" style="color: var(--sky);">Kohlenhydrate (g) *</label>
+              <input type="text" inputmode="decimal" id="calc-carbs" class="input" placeholder="0,00" />
+            </div>
+            <div class="field">
+              <label for="calc-sugar" style="color: var(--violet);">davon Zucker (g)</label>
+              <input type="text" inputmode="decimal" id="calc-sugar" class="input" placeholder="0,00" />
+            </div>
+            <div class="field" style="grid-column: span 2;">
+              <label for="calc-protein" style="color: var(--emerald);">Eiweiß / EW (g) *</label>
+              <input type="text" inputmode="decimal" id="calc-protein" class="input" placeholder="0,00" />
+            </div>
+          </div>
+
+          <!-- Live-Vorschau der berechneten Mahlzeit -->
+          <div class="calc-preview-panel">
+            <div class="calc-preview-head">Berechnete Werte für deinen Tagesplan:</div>
+            <div id="calc-live-pills" class="meal-pills">
+              <span class="pill pill-kcal">0,0 kcal</span>
+              <span class="pill pill-fat">0,00 g Fett</span>
+              <span class="pill pill-kh">0,00 g KH (davon 0,00 g Zucker)</span>
+              <span class="pill pill-ew">0,00 g EW</span>
+            </div>
+          </div>
+
+          <label class="checkbox-row" for="calc-save-fav-check">
+            <input type="checkbox" id="calc-save-fav-check" />
+            <span>Auch als Favorit speichern</span>
+          </label>
+
+          <div class="action-grid-2" style="margin-bottom: 0;">
+            <button type="submit" id="btn-submit-meal" class="btn btn-primary">Zum Tagesplan hinzufügen</button>
+            <button type="button" id="btn-save-favorite" class="btn btn-outline">Nur als Favorit speichern</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Gespeicherte Favoriten -->
+      <div class="card">
+        <div class="card-head">
+          <h2 class="card-title">Favoriten (<span id="fav-count">0</span>)</h2>
+        </div>
+
+        <div id="favorites-list">
+          <div class="empty-box">Keine Favoriten vorhanden.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- TAB 3: ZIELE & BACKUP                                                 -->
+    <!-- ===================================================================== -->
+    <section id="tab-settings" class="tab-section">
+      <!-- Bodyscan-Ziele -->
+      <div class="card">
+        <div class="card-head">
+          <h2 class="card-title">Basis-Tagesziele bearbeiten</h2>
+          <button type="button" id="btn-calc-goal-kcal" class="btn-sm btn-outline">kcal aus Makros berechnen</button>
+        </div>
+        <form id="goals-form">
+          <div class="form-grid-2">
+            <div class="field">
+              <label for="goal-in-kcal" style="color: var(--amber);">Basis-Kalorien (kcal)</label>
+              <input type="text" inputmode="decimal" id="goal-in-kcal" class="input" value="2900,0" />
+            </div>
+            <div class="field">
+              <label for="goal-in-base-act" style="color: var(--amber);">Einkalkulierte Alltagsaktivität (kcal)</label>
+              <input type="text" inputmode="decimal" id="goal-in-base-act" class="input" value="1100,0" />
+            </div>
+            <div class="field">
+              <label for="goal-in-ew" style="color: var(--emerald);">Eiweiß-Ziel (g)</label>
+              <input type="text" inputmode="decimal" id="goal-in-ew" class="input" value="220,00" />
+            </div>
+            <div class="field">
+              <label for="goal-in-kh" style="color: var(--sky);">Kohlenhydrate-Ziel (g)</label>
+              <input type="text" inputmode="decimal" id="goal-in-kh" class="input" value="330,00" />
+            </div>
+            <div class="field">
+              <label for="goal-in-sugar" style="color: var(--violet);">davon Zucker-Ziel (g)</label>
+              <input type="text" inputmode="decimal" id="goal-in-sugar" class="input" value="70,00" />
+            </div>
+            <div class="field">
+              <label for="goal-in-fat" style="color: var(--rose);">Fett-Ziel (g)</label>
+              <input type="text" inputmode="decimal" id="goal-in-fat" class="input" value="70,00" />
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width: 100%;">Basis-Tagesziele speichern</button>
+        </form>
+      </div>
+
+      <!-- Standard-Morgenroutine -->
+      <div class="card">
+        <div class="card-head">
+          <h2 class="card-title">Standard-Morgenroutine bearbeiten</h2>
+        </div>
+        <form id="mr-form">
+          <div class="field">
+            <label for="mr-in-name">Bezeichnung</label>
+            <input type="text" id="mr-in-name" class="input" value="Morgenroutine: Wellmix EAA + Aldi Sports Creatin Orange" />
+          </div>
+          <div class="form-grid-3">
+            <div class="field">
+              <label for="mr-in-kcal">kcal</label>
+              <input type="text" inputmode="decimal" id="mr-in-kcal" class="input" value="40,0" />
+            </div>
+            <div class="field">
+              <label for="mr-in-fat">Fett (g)</label>
+              <input type="text" inputmode="decimal" id="mr-in-fat" class="input" value="0,00" />
+            </div>
+            <div class="field">
+              <label for="mr-in-kh">KH (g)</label>
+              <input type="text" inputmode="decimal" id="mr-in-kh" class="input" value="0,00" />
+            </div>
+            <div class="field">
+              <label for="mr-in-sugar">Zucker (g)</label>
+              <input type="text" inputmode="decimal" id="mr-in-sugar" class="input" value="0,00" />
+            </div>
+            <div class="field" style="grid-column: span 2;">
+              <label for="mr-in-ew">Eiweiß / EW (g)</label>
+              <input type="text" inputmode="decimal" id="mr-in-ew" class="input" value="10,00" />
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width: 100%;">Morgenroutine speichern</button>
+        </form>
+      </div>
+
+      <!-- Optionaler eigener Gemini API-Key -->
+      <div class="card" id="apikey-settings-card">
+        <div class="card-head">
+          <h2 class="card-title">Gemini Vision API-Key</h2>
+          <span id="api-key-badge" class="badge-today">Kein Key</span>
+        </div>
+        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 10px;">
+          Der Foto-Scanner nutzt Gemini Vision und braucht deinen eigenen <strong>Google Gemini API-Key</strong> (kostenlos in Google AI Studio). Der Key wird nur lokal in diesem Browser gespeichert und ist im JSON-Backup enthalten – gib Backups also nicht weiter.
+        </p>
+        <form id="apikey-form">
+          <div class="field">
+            <label for="custom-apikey-input">Google Gemini API-Key (AIza...)</label>
+            <input type="password" id="custom-apikey-input" class="input" placeholder="AIza..." autocomplete="off" />
+          </div>
+          <div class="field">
+            <label for="gemini-model-input">Modell (falls Google das Standard-Modell abkündigt)</label>
+            <input type="text" id="gemini-model-input" class="input" placeholder="gemini-2.5-flash" autocomplete="off" autocapitalize="off" spellcheck="false" />
+          </div>
+          <div class="action-grid-2" style="margin-bottom: 0;">
+            <button type="submit" class="btn btn-primary">Speichern</button>
+            <button type="button" id="btn-test-apikey" class="btn btn-outline">Verbindung testen</button>
+          </div>
+        </form>
+        <div id="apikey-test-notice" class="notice-box notice-info hidden"></div>
+      </div>
+
+      <!-- JSON-Backup Export & Import -->
+      <div class="card" id="backup-card">
+        <div class="card-head">
+          <h2 class="card-title">JSON-Backup Export &amp; Import</h2>
+        </div>
+        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 12px;">
+          Sichere alle Tagespläne, Aktivitätswerte, Favoriten und Ziele als JSON-Datei oder über die Zwischenablage.
+        </p>
+        <p id="backup-status" style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); margin-bottom: 4px;"></p>
+        <p id="persist-status" style="font-size: 0.76rem; color: var(--text-muted); margin-bottom: 12px;"></p>
+        <div class="action-grid-2" style="margin-bottom: 10px;">
+          <button type="button" id="btn-export-json" class="btn btn-outline">JSON-Datei herunterladen</button>
+          <button type="button" id="btn-copy-json" class="btn btn-outline">JSON in Zwischenablage</button>
+        </div>
+        <div class="action-grid-2" style="margin-bottom: 10px;">
+          <label for="import-json-input" class="btn btn-outline" style="cursor: pointer;">JSON-Datei importieren</label>
+          <input type="file" id="import-json-input" accept=".json,application/json" class="hidden" />
+          <button type="button" id="btn-open-paste-json" class="btn btn-outline">JSON-Text einfügen</button>
+        </div>
+        <button type="button" id="btn-reset-defaults" class="btn btn-danger" style="width: 100%;">App auf Standardwerte zurücksetzen</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- Custom Reset Modal -->
+  <div id="reset-modal" class="modal-overlay" role="dialog" aria-modal="true">
+    <div class="modal-box">
+      <h3 style="font-size: 1rem; font-weight: 800; margin-bottom: 8px;">App auf Standardwerte zurücksetzen?</h3>
+      <p style="font-size: 0.84rem; color: var(--text-secondary); margin-bottom: 16px;">
+        Alle Einträge, Favoriten und Ziele werden gelöscht. Danach gelten wieder die Basis-Ziele (2900,0 kcal), eine leere Favoritenliste und der heutige Tag mit Morgenroutine. Dein Gemini API-Key bleibt erhalten.
+      </p>
+      <div style="display: flex; gap: 10px;">
+        <button type="button" id="btn-reset-cancel" class="btn btn-outline" style="flex: 1;">Abbrechen</button>
+        <button type="button" id="btn-reset-confirm" class="btn btn-danger" style="flex: 1;">Zurücksetzen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom JSON Paste Modal -->
+  <div id="json-paste-modal" class="modal-overlay" role="dialog" aria-modal="true">
+    <div class="modal-box">
+      <h3 style="font-size: 1rem; font-weight: 800; margin-bottom: 8px;">JSON-Backup einfügen</h3>
+      <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 10px;">
+        Füge hier den kopierten JSON-Backup-Text ein:
+      </p>
+      <textarea id="json-paste-textarea" class="notes-textarea" style="min-height: 130px; margin-bottom: 12px;" placeholder="{ ... }"></textarea>
+      <div style="display: flex; gap: 10px;">
+        <button type="button" id="btn-paste-json-cancel" class="btn btn-outline" style="flex: 1;">Abbrechen</button>
+        <button type="button" id="btn-paste-json-apply" class="btn btn-primary" style="flex: 1;">Importieren</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Generic Confirm Modal -->
+  <div id="confirm-modal" class="modal-overlay" role="dialog" aria-modal="true">
+    <div class="modal-box">
+      <h3 id="confirm-title" style="font-size: 1rem; font-weight: 800; margin-bottom: 8px;"></h3>
+      <p id="confirm-text" style="font-size: 0.84rem; color: var(--text-secondary); margin-bottom: 16px;"></p>
+      <div style="display: flex; gap: 10px;">
+        <button type="button" id="btn-confirm-cancel" class="btn btn-outline" style="flex: 1;">Abbrechen</button>
+        <button type="button" id="btn-confirm-ok" class="btn btn-primary" style="flex: 1;">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Feedback -->
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      'use strict';
+
+      var STORAGE_KEY = 'essensplan_tracker_v2_stable';
+      var DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
+      var BACKUP_REMINDER_DAYS = 7;
+      var BACKUP_SNOOZE_DAYS = 3;
+      var DAY_MS = 24 * 60 * 60 * 1000;
+
+      function pad2(n) {
+        return n < 10 ? '0' + n : String(n);
+      }
+
+      function dateToIso(d) {
+        return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+      }
+
+      function todayIso() {
+        return dateToIso(new Date());
+      }
+
+      var DEFAULT_GOALS = {
+        kcal: 2900.0,
+        baseActivityKcal: 1100.0,
+        ew: 220.00,
+        kh: 330.00,
+        zucker: 70.00,
+        fett: 70.00
+      };
+
+      var DEFAULT_MORNING_ROUTINE = {
+        name: 'Morgenroutine: Wellmix EAA + Aldi Sports Creatin Orange',
+        kcal: 40.0,
+        fett: 0.00,
+        kh: 0.00,
+        zucker: 0.00,
+        ew: 10.00,
+        gewicht: 1,
+        einheit: 'Portion'
+      };
+
+      var DEFAULT_FAVORITES = [];
+      // Frühere Beispiel-Favoriten (IDs fav-1 bis fav-6) werden beim Laden und Importieren automatisch entfernt
+      var LEGACY_DEMO_FAV_IDS = ['fav-1', 'fav-2', 'fav-3', 'fav-4', 'fav-5', 'fav-6'];
+
+      function newId(prefix) {
+        return prefix + '-' + Date.now() + '-' + Math.floor(Math.random() * 100000);
+      }
+
+      function numOr(v, fallback) {
+        return typeof v === 'number' && isFinite(v) ? v : fallback;
+      }
+
+      function isIsoDateKey(k) {
+        return typeof k === 'string' && k.length === 10 && k.charAt(4) === '-' && k.charAt(7) === '-' &&
+          isFinite(Date.parse(k + 'T00:00:00'));
+      }
+
+      function cleanModelName(raw) {
+        var name = typeof raw === 'string' ? raw.trim() : '';
+        if (name.indexOf('models/') === 0) name = name.slice(7);
+        var valid = name.length > 0 && name.length <= 80;
+        for (var i = 0; valid && i < name.length; i++) {
+          var ch = name.charAt(i);
+          var isAlnum = (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9');
+          if (!isAlnum && ch !== '-' && ch !== '.' && ch !== '_') valid = false;
+        }
+        return valid ? name : DEFAULT_GEMINI_MODEL;
+      }
+
+      function sanitizeEntry(e) {
+        if (!e || typeof e !== 'object') return null;
+        return {
+          id: typeof e.id === 'string' && e.id ? e.id : newId('entry'),
+          name: typeof e.name === 'string' && e.name.trim() ? e.name : 'Mahlzeit',
+          kcal: numOr(e.kcal, 0),
+          fett: numOr(e.fett, 0),
+          kh: numOr(e.kh, 0),
+          zucker: numOr(e.zucker, 0),
+          ew: numOr(e.ew, 0),
+          gewicht: numOr(e.gewicht, 1),
+          einheit: typeof e.einheit === 'string' && e.einheit ? e.einheit : 'Portion'
+        };
+      }
+
+      function sanitizeDays(days) {
+        var out = {};
+        if (!days || typeof days !== 'object') return out;
+        Object.keys(days).forEach(function (key) {
+          if (!isIsoDateKey(key) || !Array.isArray(days[key])) return;
+          out[key] = days[key].map(sanitizeEntry).filter(Boolean);
+        });
+        return out;
+      }
+
+      function sanitizeDayMetrics(metrics) {
+        var out = {};
+        if (!metrics || typeof metrics !== 'object') return out;
+        Object.keys(metrics).forEach(function (key) {
+          var m = metrics[key];
+          if (!isIsoDateKey(key) || !m || typeof m !== 'object') return;
+          out[key] = {
+            activityKcal: numOr(m.activityKcal, DEFAULT_GOALS.baseActivityKcal),
+            strengthKcal: numOr(m.strengthKcal, 0)
+          };
+        });
+        return out;
+      }
+
+      function sanitizeFavorites(list) {
+        if (!Array.isArray(list)) return null;
+        return list.map(function (f) {
+          if (!f || typeof f !== 'object') return null;
+          return {
+            id: typeof f.id === 'string' && f.id ? f.id : newId('fav'),
+            name: typeof f.name === 'string' && f.name.trim() ? f.name : 'Favorit',
+            kcal: numOr(f.kcal, 0),
+            fett: numOr(f.fett, 0),
+            kh: numOr(f.kh, 0),
+            zucker: numOr(f.zucker, 0),
+            ew: numOr(f.ew, 0),
+            basis: f.basis === '100g' ? '100g' : 'portion',
+            refAmount: numOr(f.refAmount, 1),
+            standard: numOr(f.standard, 1)
+          };
+        }).filter(Boolean);
+      }
+
+      function sanitizeGoals(g) {
+        var out = {};
+        Object.keys(DEFAULT_GOALS).forEach(function (k) {
+          out[k] = numOr(g && g[k], DEFAULT_GOALS[k]);
+        });
+        return out;
+      }
+
+      function sanitizeMorningRoutine(mr) {
+        var d = DEFAULT_MORNING_ROUTINE;
+        mr = mr && typeof mr === 'object' ? mr : {};
+        return {
+          name: typeof mr.name === 'string' && mr.name.trim() ? mr.name : d.name,
+          kcal: numOr(mr.kcal, d.kcal),
+          fett: numOr(mr.fett, d.fett),
+          kh: numOr(mr.kh, d.kh),
+          zucker: numOr(mr.zucker, d.zucker),
+          ew: numOr(mr.ew, d.ew),
+          gewicht: 1,
+          einheit: 'Portion'
+        };
+      }
+
+      function sanitizeMeta(m) {
+        m = m && typeof m === 'object' ? m : {};
+        return {
+          firstUseAt: numOr(m.firstUseAt, Date.now()),
+          lastBackupAt: numOr(m.lastBackupAt, 0),
+          snoozeUntil: numOr(m.snoozeUntil, 0)
+        };
+      }
+
+      function createDefaultState() {
+        var today = todayIso();
+        var days = {};
+        var dayMetrics = {};
+        days[today] = [{
+          id: 'entry-init-' + today.split('-').join(''),
+          name: DEFAULT_MORNING_ROUTINE.name,
+          kcal: DEFAULT_MORNING_ROUTINE.kcal,
+          fett: DEFAULT_MORNING_ROUTINE.fett,
+          kh: DEFAULT_MORNING_ROUTINE.kh,
+          zucker: DEFAULT_MORNING_ROUTINE.zucker,
+          ew: DEFAULT_MORNING_ROUTINE.ew,
+          gewicht: 1,
+          einheit: 'Portion'
+        }];
+        dayMetrics[today] = { activityKcal: DEFAULT_GOALS.baseActivityKcal, strengthKcal: 0.0 };
+        return {
+          customApiKey: '',
+          geminiModel: DEFAULT_GEMINI_MODEL,
+          meta: { firstUseAt: Date.now(), lastBackupAt: 0, snoozeUntil: 0 },
+          goals: Object.assign({}, DEFAULT_GOALS),
+          morningRoutine: Object.assign({}, DEFAULT_MORNING_ROUTINE),
+          favorites: JSON.parse(JSON.stringify(DEFAULT_FAVORITES)),
+          days: days,
+          dayMetrics: dayMetrics
+        };
+      }
+
+      // Bereinigt beliebige (z. B. importierte) Daten zu einem gültigen App-Zustand
+      function normalizeState(p) {
+        var base = createDefaultState();
+        var favs = sanitizeFavorites(p.favorites);
+        if (favs) {
+          favs = favs.filter(function (f) { return LEGACY_DEMO_FAV_IDS.indexOf(f.id) === -1; });
+        }
+        return {
+          customApiKey: typeof p.customApiKey === 'string' ? p.customApiKey.trim() : '',
+          geminiModel: cleanModelName(p.geminiModel),
+          meta: sanitizeMeta(p.meta),
+          goals: sanitizeGoals(p.goals),
+          morningRoutine: sanitizeMorningRoutine(p.morningRoutine),
+          favorites: favs === null ? base.favorites : favs,
+          days: p.days && typeof p.days === 'object' ? sanitizeDays(p.days) : base.days,
+          dayMetrics: sanitizeDayMetrics(p.dayMetrics)
+        };
+      }
+
+      // Safe localStorage wrapper with automatic In-Memory fallback
+      var memoryFallback = null;
+      var saveTimer = null;
+
+      function saveState(stateObj) {
+        memoryFallback = JSON.parse(JSON.stringify(stateObj));
+        try {
+          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(stateObj));
+        } catch (err) {
+          // Speicher blockiert: memoryFallback hält die Sitzung am Leben
+        }
+      }
+
+      function scheduleSave() {
+        if (saveTimer) clearTimeout(saveTimer);
+        saveTimer = setTimeout(function () {
+          saveTimer = null;
+          saveState(appState);
+        }, 400);
+      }
+
+      function flushPendingSave() {
+        if (saveTimer) {
+          clearTimeout(saveTimer);
+          saveTimer = null;
+          saveState(appState);
+        }
+      }
+
+      function loadState() {
+        var parsed = null;
+        try {
+          var raw = window.localStorage.getItem(STORAGE_KEY);
+          if (raw) {
+            parsed = JSON.parse(raw);
+          }
+        } catch (err) {
+          parsed = memoryFallback;
+        }
+        if (!parsed || typeof parsed !== 'object') {
+          var base = createDefaultState();
+          saveState(base);
+          return base;
+        }
+        var state = normalizeState(parsed);
+        saveState(state);
+        return state;
+      }
+
+      // Export ohne lokale Meta-Daten (Backup-Erinnerung)
+      function buildExportObject() {
+        var copy = JSON.parse(JSON.stringify(appState));
+        delete copy.meta;
+        return copy;
+      }
+
+      var appState = loadState();
+      var lastTodayIso = todayIso();
+      var currentDate = lastTodayIso;
+      var calcMode = '100g';
+      var editingMealId = null;
+      var activeCameraStream = null;
+      var lastCompressedScan = null;
+
+      // Formatting & Math Helpers (No slash regex literals)
+      function parseDeNumber(raw) {
+        if (typeof raw === 'number') return isFinite(raw) ? raw : 0;
+        if (!raw) return 0;
+        var str = String(raw).trim().split(' ').join('').split(',').join('.');
+        var filtered = '';
+        var hasDot = false;
+        for (var i = 0; i < str.length; i++) {
+          var ch = str.charAt(i);
+          if ((ch >= '0' && ch <= '9') || (ch === '-' && i === 0)) {
+            filtered += ch;
+          } else if (ch === '.' && !hasDot) {
+            filtered += ch;
+            hasDot = true;
+          }
+        }
+        var n = parseFloat(filtered);
+        return isFinite(n) ? n : 0;
+      }
+
+      function roundDec(val, decimals) {
+        var factor = Math.pow(10, decimals);
+        return Math.round((val + Number.EPSILON) * factor) / factor;
+      }
+
+      function fmtDe(val, decimals) {
+        var num = roundDec(isFinite(val) ? val : 0, decimals);
+        if (Math.abs(num) < 0.000001) num = 0;
+        return num.toFixed(decimals).split('.').join(',');
+      }
+
+      function fmtSignedDe(val, decimals) {
+        var num = roundDec(isFinite(val) ? val : 0, decimals);
+        if (Math.abs(num) < 0.000001) num = 0;
+        var sign = num >= 0 ? '+' : '-';
+        return sign + Math.abs(num).toFixed(decimals).split('.').join(',');
+      }
+
+      function escapeHtml(str) {
+        return String(str)
+          .split('&').join('&amp;')
+          .split('<').join('&lt;')
+          .split('>').join('&gt;')
+          .split('"').join('&quot;');
+      }
+
+      function getDayMetrics(isoDate) {
+        var baseAct = typeof appState.goals.baseActivityKcal === 'number' && isFinite(appState.goals.baseActivityKcal)
+          ? appState.goals.baseActivityKcal
+          : 1100.0;
+        var stored = appState.dayMetrics && appState.dayMetrics[isoDate];
+        var actKcal = stored && typeof stored.activityKcal === 'number' && isFinite(stored.activityKcal)
+          ? stored.activityKcal
+          : baseAct;
+        var strKcal = stored && typeof stored.strengthKcal === 'number' && isFinite(stored.strengthKcal)
+          ? stored.strengthKcal
+          : 0.0;
+        var activityDiff = roundDec(actKcal - baseAct, 1);
+        var strengthBonus = roundDec(strKcal, 1);
+        var totalBonus = roundDec(activityDiff + strengthBonus, 1);
+        var effectiveTargetKcal = roundDec(Math.max(0, appState.goals.kcal + totalBonus), 1);
+
+        return {
+          baseActivityKcal: baseAct,
+          activityKcal: actKcal,
+          strengthKcal: strKcal,
+          activityDiff: activityDiff,
+          strengthBonus: strengthBonus,
+          totalBonus: totalBonus,
+          effectiveTargetKcal: effectiveTargetKcal
+        };
+      }
+
+      function setDayMetrics(isoDate, activityKcal, strengthKcal, deferSave) {
+        if (!appState.dayMetrics || typeof appState.dayMetrics !== 'object') {
+          appState.dayMetrics = {};
+        }
+        appState.dayMetrics[isoDate] = {
+          activityKcal: roundDec(Math.max(0, activityKcal), 1),
+          strengthKcal: roundDec(Math.max(0, strengthKcal), 1)
+        };
+        if (deferSave) {
+          scheduleSave();
+        } else {
+          saveState(appState);
+        }
+      }
+
+      var WEEKDAYS = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+
+      function formatFullDateDe(isoDate) {
+        var parts = isoDate.split('-');
+        if (parts.length !== 3) return isoDate;
+        var y = parseInt(parts[0], 10);
+        var m = parseInt(parts[1], 10);
+        var d = parseInt(parts[2], 10);
+        var dateObj = new Date(y, m - 1, d);
+        var wd = WEEKDAYS[dateObj.getDay()] || '';
+        var dd = d < 10 ? '0' + d : String(d);
+        var mm = m < 10 ? '0' + m : String(m);
+        return wd + ', ' + dd + '.' + mm + '.' + y;
+      }
+
+      function shiftDateIso(isoDate, delta) {
+        var parts = isoDate.split('-');
+        var d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10) + delta);
+        var yyyy = d.getFullYear();
+        var mm = d.getMonth() + 1 < 10 ? '0' + (d.getMonth() + 1) : String(d.getMonth() + 1);
+        var dd = d.getDate() < 10 ? '0' + d.getDate() : String(d.getDate());
+        return yyyy + '-' + mm + '-' + dd;
+      }
+
+      function formatDateDe(isoDate) {
+        var p = isoDate.split('-');
+        return p.length === 3 ? p[2] + '.' + p[1] + '.' + p[0] : isoDate;
+      }
+
+      function shortDayDe(isoDate) {
+        var p = isoDate.split('-');
+        var d = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
+        return WEEKDAYS[d.getDay()].slice(0, 2) + ' ' + p[2] + '.' + p[1] + '.';
+      }
+
+      var toastTimer = null;
+      function showToast(msg, action, duration) {
+        var el = document.getElementById('toast');
+        if (!el) return;
+        el.textContent = '';
+        var span = document.createElement('span');
+        span.textContent = msg;
+        el.appendChild(span);
+
+        if (action && action.label && typeof action.fn === 'function') {
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'toast-action';
+          btn.textContent = action.label;
+          btn.addEventListener('click', function () {
+            if (toastTimer) clearTimeout(toastTimer);
+            el.classList.remove('show');
+            el.classList.remove('has-action');
+            action.fn();
+          });
+          el.appendChild(btn);
+          el.classList.add('has-action');
+        } else {
+          el.classList.remove('has-action');
+        }
+
+        el.classList.add('show');
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(function () {
+          el.classList.remove('show');
+          el.classList.remove('has-action');
+        }, duration || (action ? 6000 : 2800));
+      }
+
+      var confirmCallback = null;
+      function askConfirm(title, text, okLabel, onOk) {
+        document.getElementById('confirm-title').textContent = title;
+        document.getElementById('confirm-text').textContent = text;
+        document.getElementById('btn-confirm-ok').textContent = okLabel || 'OK';
+        confirmCallback = onOk;
+        document.getElementById('confirm-modal').classList.add('open');
+      }
+
+      function closeConfirm() {
+        confirmCallback = null;
+        document.getElementById('confirm-modal').classList.remove('open');
+      }
+
+      function copyTextToClipboard(text, successMsg, onSuccess) {
+        var temp = document.createElement('textarea');
+        temp.value = text;
+        temp.setAttribute('readonly', '');
+        temp.style.position = 'fixed';
+        temp.style.left = '-9999px';
+        document.body.appendChild(temp);
+        temp.focus();
+        temp.select();
+        temp.setSelectionRange(0, temp.value.length);
+
+        var ok = false;
+        try {
+          ok = document.execCommand('copy');
+        } catch (err) {
+          ok = false;
+        }
+        document.body.removeChild(temp);
+
+        function done() {
+          showToast(successMsg);
+          if (onSuccess) onSuccess();
+        }
+
+        if (ok) {
+          done();
+        } else if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(done).catch(function () {
+            showToast('Kopieren eingeschränkt – Text ist markierbar.');
+          });
+        } else {
+          showToast('Kopieren eingeschränkt – Text ist markierbar.');
+        }
+      }
+
+      // Render Functions
+      function renderHeader() {
+        var today = todayIso();
+        document.getElementById('display-date-label').textContent = formatFullDateDe(currentDate);
+        document.getElementById('date-picker').value = currentDate;
+        var badge = document.getElementById('today-badge');
+        if (currentDate === today) {
+          badge.classList.remove('hidden');
+        } else {
+          badge.classList.add('hidden');
+        }
+        document.getElementById('btn-jump-today').textContent = 'Heute (' + formatDateDe(today).slice(0, 6) + ')';
+      }
+
+      function renderPlanTab() {
+        var entries = appState.days[currentDate] || [];
+        var sKcal = 0, sFett = 0, sKh = 0, sZucker = 0, sEw = 0;
+
+        for (var i = 0; i < entries.length; i++) {
+          sKcal += entries[i].kcal;
+          sFett += entries[i].fett;
+          sKh += entries[i].kh;
+          sZucker += entries[i].zucker;
+          sEw += entries[i].ew;
+        }
+
+        var g = appState.goals;
+        var m = getDayMetrics(currentDate);
+
+        // Activity & Strength Card Sync
+        document.getElementById('base-goal-inline').textContent = fmtDe(g.kcal, 1);
+        document.getElementById('base-act-inline').textContent = fmtDe(m.baseActivityKcal, 1);
+        var actIn = document.getElementById('day-activity-input');
+        var strIn = document.getElementById('day-strength-input');
+        if (document.activeElement !== actIn) {
+          actIn.value = fmtDe(m.activityKcal, 0);
+        }
+        if (document.activeElement !== strIn) {
+          strIn.value = fmtDe(m.strengthKcal, 0);
+        }
+        document.getElementById('badge-act-diff').textContent = 'Aktivitäts-Differenz: ' + fmtSignedDe(m.activityDiff, 1) + ' kcal';
+        document.getElementById('badge-str-bonus').textContent = 'Krafttraining: ' + fmtSignedDe(m.strengthBonus, 1) + ' kcal';
+        document.getElementById('badge-eff-goal').textContent = 'Effektives Ziel: ' + fmtDe(m.effectiveTargetKcal, 1) + ' kcal';
+
+        // Kcal (effectiveTargetKcal)
+        var targetKcal = m.effectiveTargetKcal;
+        var pKcal = targetKcal > 0 ? Math.round((sKcal / targetKcal) * 100) : 0;
+        var rKcal = Math.max(0, targetKcal - sKcal);
+        document.getElementById('val-kcal').textContent = fmtDe(sKcal, 1);
+        document.getElementById('goal-kcal').textContent = fmtDe(targetKcal, 1);
+        document.getElementById('pct-kcal').textContent = pKcal + ' %';
+        document.getElementById('summary-badge').textContent = pKcal + ' % kcal erreicht';
+        document.getElementById('bar-kcal').style.width = Math.min(100, pKcal) + '%';
+        document.getElementById('rem-kcal').textContent = 'Rest: ' + fmtDe(rKcal, 1) + ' kcal';
+
+        // Eiweiß
+        var pEw = g.ew > 0 ? Math.round((sEw / g.ew) * 100) : 0;
+        var rEw = Math.max(0, g.ew - sEw);
+        document.getElementById('val-ew').textContent = fmtDe(sEw, 2);
+        document.getElementById('goal-ew').textContent = fmtDe(g.ew, 2);
+        document.getElementById('pct-ew').textContent = pEw + ' %';
+        document.getElementById('bar-ew').style.width = Math.min(100, pEw) + '%';
+        document.getElementById('rem-ew').textContent = 'Rest: ' + fmtDe(rEw, 2) + ' g';
+
+        // Kohlenhydrate
+        var pKh = g.kh > 0 ? Math.round((sKh / g.kh) * 100) : 0;
+        var rKh = Math.max(0, g.kh - sKh);
+        document.getElementById('val-kh').textContent = fmtDe(sKh, 2);
+        document.getElementById('goal-kh').textContent = fmtDe(g.kh, 2);
+        document.getElementById('pct-kh').textContent = pKh + ' %';
+        document.getElementById('bar-kh').style.width = Math.min(100, pKh) + '%';
+        document.getElementById('rem-kh').textContent = 'Rest: ' + fmtDe(rKh, 2) + ' g';
+
+        // davon Zucker
+        var gSugar = typeof g.zucker === 'number' && isFinite(g.zucker) ? g.zucker : 70.00;
+        var pSugar = gSugar > 0 ? Math.round((sZucker / gSugar) * 100) : 0;
+        var rSugar = Math.max(0, gSugar - sZucker);
+        document.getElementById('val-sugar').textContent = fmtDe(sZucker, 2);
+        document.getElementById('goal-sugar').textContent = fmtDe(gSugar, 2);
+        document.getElementById('pct-sugar').textContent = pSugar + ' %';
+        document.getElementById('bar-sugar').style.width = Math.min(100, pSugar) + '%';
+        document.getElementById('rem-sugar').textContent = 'Rest: ' + fmtDe(rSugar, 2) + ' g';
+
+        // Fett
+        var pFat = g.fett > 0 ? Math.round((sFett / g.fett) * 100) : 0;
+        var rFat = Math.max(0, g.fett - sFett);
+        document.getElementById('val-fat').textContent = fmtDe(sFett, 2);
+        document.getElementById('goal-fat').textContent = fmtDe(g.fett, 2);
+        document.getElementById('pct-fat').textContent = pFat + ' %';
+        document.getElementById('bar-fat').style.width = Math.min(100, pFat) + '%';
+        document.getElementById('rem-fat').textContent = 'Rest: ' + fmtDe(rFat, 2) + ' g';
+
+        // Meals List
+        document.getElementById('meals-count').textContent = String(entries.length);
+        var listEl = document.getElementById('meals-list');
+
+        if (entries.length === 0) {
+          listEl.innerHTML =
+            '<div class="empty-box">Noch keine Mahlzeiten für diesen Tag eingetragen.<br>Nutze <strong>+ Morgenroutine einfügen</strong> oder <strong>+ Mahlzeit / Foto-Scan</strong>.</div>';
+        } else {
+          var htmlParts = [];
+          for (var j = 0; j < entries.length; j++) {
+            var item = entries[j];
+            htmlParts.push(
+              '<div class="meal-row">' +
+                '<div class="meal-main">' +
+                  '<div class="meal-name">' + escapeHtml(item.name) + '</div>' +
+                  '<div class="meal-pills">' +
+                    '<span class="pill pill-kcal">' + fmtDe(item.kcal, 1) + ' kcal</span>' +
+                    '<span class="pill pill-fat">' + fmtDe(item.fett, 2) + ' g Fett</span>' +
+                    '<span class="pill pill-kh">' + fmtDe(item.kh, 2) + ' g KH (davon ' + fmtDe(item.zucker, 2) + ' g Zucker)</span>' +
+                    '<span class="pill pill-ew">' + fmtDe(item.ew, 2) + ' g EW</span>' +
+                  '</div>' +
+                '</div>' +
+                '<div class="meal-actions">' +
+                  '<button type="button" class="icon-btn-edit" data-edit-meal="' + escapeHtml(item.id) + '" aria-label="Mahlzeit bearbeiten" title="Bearbeiten">' +
+                    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
+                      '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />' +
+                      '<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />' +
+                    '</svg>' +
+                  '</button>' +
+                  '<button type="button" class="icon-btn-del" data-del-meal="' + escapeHtml(item.id) + '" aria-label="Mahlzeit löschen" title="Löschen">' +
+                    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
+                      '<polyline points="3 6 5 6 21 6" />' +
+                      '<path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />' +
+                    '</svg>' +
+                  '</button>' +
+                '</div>' +
+              '</div>'
+            );
+          }
+          listEl.innerHTML = htmlParts.join('');
+        }
+
+
+        renderWeek();
+        renderBackupBanner();
+      }
+
+      function renderWeek() {
+        var rows = [];
+        var tracked = 0;
+        var tK = 0, tE = 0, tKh = 0, tF = 0;
+
+        for (var i = 6; i >= 0; i--) {
+          var iso = shiftDateIso(currentDate, -i);
+          var entries = appState.days[iso] || [];
+          var sK = 0, sE = 0, sKh = 0, sF = 0;
+          for (var k = 0; k < entries.length; k++) {
+            sK += entries[k].kcal;
+            sE += entries[k].ew;
+            sKh += entries[k].kh;
+            sF += entries[k].fett;
+          }
+          var has = entries.length > 0;
+          if (has) {
+            tracked++;
+            tK += sK;
+            tE += sE;
+            tKh += sKh;
+            tF += sF;
+          }
+          var target = getDayMetrics(iso).effectiveTargetKcal;
+          var pct = target > 0 ? (sK / target) * 100 : 0;
+
+          rows.push(
+            '<button type="button" class="week-row' + (iso === currentDate ? ' current' : '') + (has ? '' : ' empty') + '" data-week-date="' + iso + '">' +
+              '<span class="week-day">' + shortDayDe(iso) + '</span>' +
+              '<span class="week-bar"><span class="week-bar-fill' + (pct > 100 ? ' over' : '') + '" style="width:' + Math.min(100, Math.max(0, pct)) + '%"></span></span>' +
+              '<span class="week-vals">' + (has ? fmtDe(sK, 0) + ' kcal · ' + fmtDe(sE, 0) + ' g EW' : 'keine Einträge') + '</span>' +
+            '</button>'
+          );
+        }
+
+        document.getElementById('week-sub').textContent = '· 7 Tage bis ' + shortDayDe(currentDate);
+        document.getElementById('week-rows').innerHTML = rows.join('');
+
+        var avgEl = document.getElementById('week-avgs');
+        if (tracked === 0) {
+          avgEl.innerHTML = '<span class="pill">Noch keine Einträge in diesen 7 Tagen</span>';
+        } else {
+          avgEl.innerHTML =
+            '<span class="pill pill-kcal">Ø ' + fmtDe(tK / tracked, 0) + ' kcal</span>' +
+            '<span class="pill pill-ew">Ø ' + fmtDe(tE / tracked, 1) + ' g EW</span>' +
+            '<span class="pill pill-kh">Ø ' + fmtDe(tKh / tracked, 1) + ' g KH</span>' +
+            '<span class="pill pill-fat">Ø ' + fmtDe(tF / tracked, 1) + ' g Fett</span>' +
+            '<span class="pill">' + tracked + ' erfasste Tage</span>';
+        }
+      }
+
+      function hasAnyMeals() {
+        return Object.keys(appState.days).some(function (k) {
+          return appState.days[k].length > 0;
+        });
+      }
+
+      function backupIsDue() {
+        var meta = appState.meta;
+        var now = Date.now();
+        if (!hasAnyMeals()) return false;
+        if (meta.snoozeUntil > now) return false;
+        var ref = meta.lastBackupAt > 0 ? meta.lastBackupAt : meta.firstUseAt;
+        return now - ref > BACKUP_REMINDER_DAYS * DAY_MS;
+      }
+
+      function renderBackupBanner() {
+        var el = document.getElementById('backup-banner');
+        if (!el) return;
+        var due = backupIsDue();
+        if (due) {
+          var meta = appState.meta;
+          var txt = meta.lastBackupAt > 0
+            ? 'Dein letztes Backup ist ' + Math.floor((Date.now() - meta.lastBackupAt) / DAY_MS) + ' Tage alt.'
+            : 'Du hast noch kein Backup gemacht.';
+          document.getElementById('backup-banner-text').textContent =
+            txt + ' Android kann App-Daten löschen – sichere regelmäßig eine JSON-Datei.';
+          el.classList.remove('hidden');
+        } else {
+          el.classList.add('hidden');
+        }
+      }
+
+      function renderBackupStatus() {
+        var el = document.getElementById('backup-status');
+        var pe = document.getElementById('persist-status');
+        if (!el || !pe) return;
+        var meta = appState.meta;
+        if (meta.lastBackupAt > 0) {
+          var daysAgo = Math.floor((Date.now() - meta.lastBackupAt) / DAY_MS);
+          el.textContent = 'Letztes Backup: ' + formatDateDe(dateToIso(new Date(meta.lastBackupAt))) +
+            (daysAgo === 0 ? ' (heute)' : ' (vor ' + daysAgo + ' Tag' + (daysAgo === 1 ? '' : 'en') + ')');
+        } else {
+          el.textContent = 'Noch kein Backup erstellt.';
+        }
+        pe.textContent = '';
+        try {
+          if (navigator.storage && navigator.storage.persisted) {
+            navigator.storage.persisted().then(function (p) {
+              pe.textContent = p
+                ? 'Speicherschutz: aktiv – der Browser löscht die App-Daten nicht automatisch.'
+                : 'Speicherschutz: nicht garantiert – Android kann App-Daten bei Platzmangel löschen. Daher regelmäßig sichern.';
+            });
+          }
+        } catch (err) {
+          // ignorieren
+        }
+      }
+
+      function renderFavoritesList() {
+        var favs = appState.favorites || [];
+        document.getElementById('fav-count').textContent = String(favs.length);
+        var container = document.getElementById('favorites-list');
+
+        if (favs.length === 0) {
+          container.innerHTML = '<div class="empty-box">Keine Favoriten vorhanden.</div>';
+          return;
+        }
+
+        var html = [];
+        for (var i = 0; i < favs.length; i++) {
+          var fav = favs[i];
+          html.push(
+            '<div class="fav-card">' +
+              '<div class="fav-head">' +
+                '<div class="fav-title">' + escapeHtml(fav.name) + '</div>' +
+                '<button type="button" class="icon-btn-del" style="width:30px;height:30px;" data-del-fav="' + escapeHtml(fav.id) + '" aria-label="Favorit löschen" title="Favorit löschen">' +
+                  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
+                    '<line x1="18" y1="6" x2="6" y2="18" />' +
+                    '<line x1="6" y1="6" x2="18" y2="18" />' +
+                  '</svg>' +
+                '</button>' +
+              '</div>' +
+              '<div class="meal-pills">' +
+                '<span class="pill pill-kcal">' + fmtDe(fav.kcal, 1) + ' kcal</span>' +
+                '<span class="pill pill-fat">' + fmtDe(fav.fett, 2) + ' g Fett</span>' +
+                '<span class="pill pill-kh">' + fmtDe(fav.kh, 2) + ' g KH (davon ' + fmtDe(fav.zucker, 2) + ' g Zucker)</span>' +
+                '<span class="pill pill-ew">' + fmtDe(fav.ew, 2) + ' g EW</span>' +
+              '</div>' +
+              '<div class="fav-actions">' +
+                '<button type="button" class="btn-sm btn-primary" data-add-fav="' + escapeHtml(fav.id) + '">+ Direkt in Tagesplan</button>' +
+                '<button type="button" class="btn-sm btn-outline" data-load-fav="' + escapeHtml(fav.id) + '">In Rechner laden</button>' +
+              '</div>' +
+            '</div>'
+          );
+        }
+        container.innerHTML = html.join('');
+      }
+
+      function renderSettingsTab() {
+        var g = appState.goals;
+        var gSugar = typeof g.zucker === 'number' && isFinite(g.zucker) ? g.zucker : 70.00;
+        var gBaseAct = typeof g.baseActivityKcal === 'number' && isFinite(g.baseActivityKcal) ? g.baseActivityKcal : 1100.0;
+        document.getElementById('goal-in-kcal').value = fmtDe(g.kcal, 1);
+        document.getElementById('goal-in-base-act').value = fmtDe(gBaseAct, 1);
+        document.getElementById('goal-in-ew').value = fmtDe(g.ew, 2);
+        document.getElementById('goal-in-kh').value = fmtDe(g.kh, 2);
+        document.getElementById('goal-in-sugar').value = fmtDe(gSugar, 2);
+        document.getElementById('goal-in-fat').value = fmtDe(g.fett, 2);
+
+        var mr = appState.morningRoutine;
+        document.getElementById('mr-in-name').value = mr.name || DEFAULT_MORNING_ROUTINE.name;
+        document.getElementById('mr-in-kcal').value = fmtDe(mr.kcal, 1);
+        document.getElementById('mr-in-fat').value = fmtDe(mr.fett, 2);
+        document.getElementById('mr-in-kh').value = fmtDe(mr.kh, 2);
+        document.getElementById('mr-in-sugar').value = fmtDe(mr.zucker, 2);
+        document.getElementById('mr-in-ew').value = fmtDe(mr.ew, 2);
+
+        var keyInput = document.getElementById('custom-apikey-input');
+        var badge = document.getElementById('api-key-badge');
+        keyInput.value = appState.customApiKey || '';
+        document.getElementById('gemini-model-input').value = appState.geminiModel || DEFAULT_GEMINI_MODEL;
+        badge.textContent = hasApiKey() ? 'Key gespeichert' : 'Kein Key';
+        renderBackupStatus();
+      }
+
+      function hasApiKey() {
+        return (appState.customApiKey || '').trim().length > 0;
+      }
+
+      function renderAll() {
+        renderHeader();
+        renderPlanTab();
+        renderFavoritesList();
+        renderSettingsTab();
+      }
+
+      // Calculator Logic (Exact scaling BEFORE rounding)
+      function getCalculatedMacros() {
+        var refAmount = parseDeNumber(document.getElementById('calc-ref-amount').value);
+        var actualAmount = parseDeNumber(document.getElementById('calc-actual-amount').value);
+        var factor = refAmount > 0 ? actualAmount / refAmount : 0;
+
+        var bKcal = parseDeNumber(document.getElementById('calc-kcal').value);
+        var bFat = parseDeNumber(document.getElementById('calc-fat').value);
+        var bKh = parseDeNumber(document.getElementById('calc-carbs').value);
+        var bSugar = parseDeNumber(document.getElementById('calc-sugar').value);
+        var bEw = parseDeNumber(document.getElementById('calc-protein').value);
+
+        return {
+          kcal: roundDec(bKcal * factor, 1),
+          fett: roundDec(bFat * factor, 2),
+          kh: roundDec(bKh * factor, 2),
+          zucker: roundDec(bSugar * factor, 2),
+          ew: roundDec(bEw * factor, 2),
+          gewicht: actualAmount,
+          einheit: calcMode === 'portion' ? 'Portion' : 'g'
+        };
+      }
+
+      function updateCalcLivePreview() {
+        var res = getCalculatedMacros();
+        document.getElementById('calc-live-pills').innerHTML =
+          '<span class="pill pill-kcal">' + fmtDe(res.kcal, 1) + ' kcal</span>' +
+          '<span class="pill pill-fat">' + fmtDe(res.fett, 2) + ' g Fett</span>' +
+          '<span class="pill pill-kh">' + fmtDe(res.kh, 2) + ' g KH (davon ' + fmtDe(res.zucker, 2) + ' g Zucker)</span>' +
+          '<span class="pill pill-ew">' + fmtDe(res.ew, 2) + ' g EW</span>';
+      }
+
+      function setCalcMode(mode) {
+        calcMode = mode;
+        var b100 = document.getElementById('mode-100g');
+        var bPort = document.getElementById('mode-portion');
+        var lRef = document.getElementById('lbl-ref-amount');
+        var lAct = document.getElementById('lbl-actual-amount');
+        var iRef = document.getElementById('calc-ref-amount');
+        var iAct = document.getElementById('calc-actual-amount');
+
+        if (mode === 'portion') {
+          bPort.classList.add('active');
+          b100.classList.remove('active');
+          lRef.textContent = 'Referenzmenge (z. B. 1 Portion)';
+          lAct.textContent = 'Anzahl Portionen *';
+          iRef.value = '1';
+          iAct.value = '1';
+        } else {
+          b100.classList.add('active');
+          bPort.classList.remove('active');
+          lRef.textContent = 'Referenzmenge auf Etikett (g / ml)';
+          lAct.textContent = 'Abgewogenes Gewicht in g *';
+          iRef.value = '100';
+          iAct.value = '100';
+        }
+        updateCalcLivePreview();
+      }
+
+      function resetEditingState() {
+        editingMealId = null;
+        document.getElementById('calc-heading').textContent = 'Exakter Etiketten- & Portionsrechner';
+        document.getElementById('btn-submit-meal').textContent = 'Zum Tagesplan hinzufügen';
+        document.getElementById('btn-cancel-edit').classList.add('hidden');
+      }
+
+      function openEditMeal(mealId) {
+        var entries = appState.days[currentDate] || [];
+        var found = null;
+        for (var i = 0; i < entries.length; i++) {
+          if (entries[i].id === mealId) {
+            found = entries[i];
+            break;
+          }
+        }
+        if (!found) return;
+
+        editingMealId = mealId;
+        switchTab('tab-add');
+        setCalcMode('portion');
+        document.getElementById('calc-name').value = found.name;
+        document.getElementById('calc-ref-amount').value = '1';
+        document.getElementById('calc-actual-amount').value = '1';
+        document.getElementById('calc-kcal').value = fmtDe(found.kcal, 1);
+        document.getElementById('calc-fat').value = fmtDe(found.fett, 2);
+        document.getElementById('calc-carbs').value = fmtDe(found.kh, 2);
+        document.getElementById('calc-sugar').value = fmtDe(found.zucker, 2);
+        document.getElementById('calc-protein').value = fmtDe(found.ew, 2);
+
+        document.getElementById('calc-heading').textContent = 'Mahlzeit bearbeiten';
+        document.getElementById('btn-submit-meal').textContent = 'Änderungen speichern';
+        document.getElementById('btn-cancel-edit').classList.remove('hidden');
+
+        updateCalcLivePreview();
+        document.getElementById('calculator-card').scrollIntoView({ behavior: 'smooth' });
+      }
+
+      // Pure Gemini 2.5 Flash Vision Foto-Scanner (NO OCR / NO Tesseract)
+      function stopLiveCamera() {
+        if (activeCameraStream) {
+          try {
+            var tracks = activeCameraStream.getTracks();
+            for (var i = 0; i < tracks.length; i++) {
+              tracks[i].stop();
+            }
+          } catch (e) {}
+          activeCameraStream = null;
+        }
+        var video = document.getElementById('camera-video');
+        if (video) video.srcObject = null;
+        document.getElementById('camera-box').classList.add('hidden');
+      }
+
+      function showScanNotice(msg, level) {
+        var box = document.getElementById('scan-notice');
+        box.className = 'notice-box notice-' + (level || 'info');
+        box.textContent = msg;
+        box.classList.remove('hidden');
+      }
+
+      function startLiveCamera() {
+        stopLiveCamera();
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          showScanNotice('Live-Kamera wird in dieser Vorschau nicht unterstützt. Bitte "Bild aus Galerie wählen" nutzen.', 'error');
+          return;
+        }
+
+        navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 960 } },
+          audio: false
+        }).catch(function () {
+          return navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        }).then(function (stream) {
+          activeCameraStream = stream;
+          var video = document.getElementById('camera-video');
+          video.srcObject = stream;
+          document.getElementById('camera-box').classList.remove('hidden');
+          document.getElementById('scan-notice').classList.add('hidden');
+          return video.play();
+        }).catch(function () {
+          stopLiveCamera();
+          showScanNotice('Kamerazugriff wurde blockiert. Öffne stattdessen die Galerie-Auswahl…', 'info');
+          var input = document.getElementById('gallery-upload-input');
+          if (input) {
+            setTimeout(function () { input.click(); }, 300);
+          }
+        });
+      }
+
+      function compressToJpeg1280(source, srcW, srcH) {
+        var maxDim = 1280;
+        var w = srcW;
+        var h = srcH;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) {
+            h = Math.round((h * maxDim) / w);
+            w = maxDim;
+          } else {
+            w = Math.round((w * maxDim) / h);
+            h = maxDim;
+          }
+        }
+
+        var canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        var ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(source, 0, 0, w, h);
+
+        var dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        return {
+          dataUrl: dataUrl,
+          base64: dataUrl.split(',')[1] || ''
+        };
+      }
+
+      function processImageFile(file, callback) {
+        var reader = new FileReader();
+        reader.onload = function (ev) {
+          var img = new Image();
+          img.onload = function () {
+            try {
+              var result = compressToJpeg1280(img, img.naturalWidth || img.width, img.naturalHeight || img.height);
+              callback(null, result);
+            } catch (err) {
+              callback(err);
+            }
+          };
+          img.onerror = function () {
+            callback(new Error('Bild konnte nicht geladen werden.'));
+          };
+          img.src = ev.target.result;
+        };
+        reader.onerror = function () {
+          callback(new Error('Datei konnte nicht gelesen werden.'));
+        };
+        reader.readAsDataURL(file);
+      }
+
+      function fillFormFromGemini(data) {
+        var isPortion = data.referenceType === 'portion';
+        setCalcMode(isPortion ? 'portion' : '100g');
+
+        var prodName = data.productName ? String(data.productName).trim() : '';
+        if (isPortion && typeof data.portionGrams === 'number' && data.portionGrams > 0) {
+          document.getElementById('calc-ref-amount').value = '1';
+          document.getElementById('calc-actual-amount').value = '1';
+          if (prodName) {
+            prodName = prodName + ' (1 Portion / ' + fmtDe(data.portionGrams, 0) + ' g)';
+          } else {
+            prodName = '1 Portion (' + fmtDe(data.portionGrams, 0) + ' g)';
+          }
+        }
+
+        if (prodName) {
+          document.getElementById('calc-name').value = prodName;
+        }
+
+        var count = 0;
+        if (typeof data.kcal === 'number' && isFinite(data.kcal)) {
+          document.getElementById('calc-kcal').value = fmtDe(data.kcal, 1);
+          count++;
+        }
+        if (typeof data.fett === 'number' && isFinite(data.fett)) {
+          document.getElementById('calc-fat').value = fmtDe(data.fett, 2);
+          count++;
+        }
+        if (typeof data.kh === 'number' && isFinite(data.kh)) {
+          document.getElementById('calc-carbs').value = fmtDe(data.kh, 2);
+          count++;
+        }
+        if (typeof data.zucker === 'number' && isFinite(data.zucker)) {
+          document.getElementById('calc-sugar').value = fmtDe(data.zucker, 2);
+          count++;
+        }
+        if (typeof data.ew === 'number' && isFinite(data.ew)) {
+          document.getElementById('calc-protein').value = fmtDe(data.ew, 2);
+          count++;
+        }
+
+        updateCalcLivePreview();
+
+        if (count > 0) {
+          var fields = ['calc-name', 'calc-kcal', 'calc-fat', 'calc-carbs', 'calc-sugar', 'calc-protein'];
+          for (var i = 0; i < fields.length; i++) {
+            var el = document.getElementById(fields[i]);
+            if (el && el.value) {
+              el.classList.add('input-flash');
+              (function (target) {
+                setTimeout(function () { target.classList.remove('input-flash'); }, 2200);
+              })(el);
+            }
+          }
+          var warns = checkPlausibility(data);
+          var okMsg = 'Gemini Vision: ' + count + ' Nährwerte ausgelesen und in den Rechner übertragen! Gib jetzt dein abgewogenes Gewicht ein.';
+          if (warns.length > 0) {
+            showScanNotice(okMsg + '\n\n⚠ Bitte mit dem Foto vergleichen:\n• ' + warns.join('\n• '), 'warn');
+            showToast('Gelesene Werte bitte prüfen!');
+          } else {
+            showScanNotice(okMsg, 'success');
+            showToast('Nährwerte von Gemini übernommen!');
+          }
+          var actInput = document.getElementById('calc-actual-amount');
+          if (actInput) {
+            actInput.focus();
+            actInput.select();
+          }
+        } else {
+          showScanNotice('Auf dem Foto konnte keine eindeutige Nährwerttabelle erkannt werden. Bitte Werte darunter eintragen.', 'error');
+        }
+      }
+
+      function checkPlausibility(d) {
+        var warns = [];
+        function n(v) { return typeof v === 'number' && isFinite(v) ? v : 0; }
+        var kcal = n(d.kcal), fett = n(d.fett), kh = n(d.kh), zucker = n(d.zucker), ew = n(d.ew);
+
+        var fromMacros = 4 * ew + 4 * kh + 9 * fett;
+        var tolerance = Math.max(20, 0.2 * Math.max(kcal, fromMacros));
+        if (Math.abs(kcal - fromMacros) > tolerance) {
+          var looksLikeKj = kcal > 0 && Math.abs(kcal / 4.184 - fromMacros) <= Math.max(20, 0.15 * fromMacros);
+          if (looksLikeKj) {
+            warns.push('Der kcal-Wert (' + fmtDe(kcal, 1) + ') sieht nach kJ aus – aus den Makros ergeben sich nur ca. ' + fmtDe(fromMacros, 0) + ' kcal.');
+          } else {
+            warns.push('Kalorien und Makros passen nicht zusammen: gelesen ' + fmtDe(kcal, 1) + ' kcal, aus den Makros ergeben sich ca. ' + fmtDe(fromMacros, 0) + ' kcal (Ballaststoffe und Zuckeralkohole erklären nur kleine Abweichungen).');
+          }
+        }
+        if (zucker > kh + 0.05) {
+          warns.push('Zucker (' + fmtDe(zucker, 2) + ' g) ist höher als die Kohlenhydrate (' + fmtDe(kh, 2) + ' g).');
+        }
+        if (d.referenceType !== 'portion') {
+          if (fett + kh + ew > 100.5) {
+            warns.push('Fett + KH + EW ergeben mehr als 100 g pro 100 g.');
+          }
+          if (kcal > 905) {
+            warns.push('Mehr als 900 kcal pro 100 g ist nicht plausibel.');
+          }
+        }
+        return warns;
+      }
+
+      function callGeminiEndpoint(apiKey, model, promptText, base64Jpeg) {
+        var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent?key=' + encodeURIComponent(apiKey);
+        var bodyPayload = {
+          contents: [
+            {
+              role: 'user',
+              parts: [
+                { text: promptText },
+                {
+                  inlineData: {
+                    mimeType: 'image/jpeg',
+                    data: base64Jpeg
+                  }
+                }
+              ]
+            }
+          ],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: 'OBJECT',
+              properties: {
+                productName: { type: 'STRING' },
+                referenceType: { type: 'STRING', enum: ['100g', 'portion'] },
+                portionGrams: { type: 'NUMBER' },
+                kcal: { type: 'NUMBER' },
+                fett: { type: 'NUMBER' },
+                kh: { type: 'NUMBER' },
+                zucker: { type: 'NUMBER' },
+                ew: { type: 'NUMBER' }
+              },
+              required: ['productName', 'referenceType', 'kcal', 'fett', 'kh', 'zucker', 'ew']
+            }
+          }
+        };
+
+        return fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(bodyPayload)
+        }).then(function (response) {
+          if (!response.ok) {
+            var err = new Error('HTTP ' + response.status);
+            err.status = response.status;
+            throw err;
+          }
+          return response.json();
+        });
+      }
+
+      function describeGeminiError(err, model) {
+        if (navigator.onLine === false) {
+          return 'Du bist offline. Der Foto-Scan braucht Internet.';
+        }
+        var st = err && err.status;
+        if (st === 400 || st === 401 || st === 403) {
+          return 'Die Anfrage wurde abgelehnt (HTTP ' + st + '). Meist ist der API-Key ungültig – bitte unter "Ziele & Backup" prüfen.';
+        }
+        if (st === 404) {
+          return 'Das Modell "' + model + '" wurde nicht gefunden (HTTP 404). Bitte den Modellnamen unter "Ziele & Backup" prüfen.';
+        }
+        if (st === 429) {
+          return 'Das Anfragelimit von Gemini ist erreicht (HTTP 429). Bitte kurz warten und erneut versuchen.';
+        }
+        return 'Die KI-Analyse konnte gerade nicht abgeschlossen werden (' + (err && err.message ? err.message : 'Verbindungsfehler') + ').';
+      }
+
+      function analyzeWithGeminiVision(scanObj) {
+        lastCompressedScan = scanObj;
+        document.getElementById('scan-preview-img').src = scanObj.dataUrl;
+        document.getElementById('scan-preview-card').classList.remove('hidden');
+        document.getElementById('btn-clear-scan').classList.remove('hidden');
+
+        var key = (appState.customApiKey || '').trim();
+        var model = appState.geminiModel || DEFAULT_GEMINI_MODEL;
+
+        if (!key) {
+          showScanNotice(
+            'Foto wurde geladen. Für die automatische Auswertung brauchst du einen eigenen Gemini API-Key (kostenlos in Google AI Studio). Trage ihn unter "Ziele & Backup" ein – oder tippe die Werte direkt unten ab.',
+            'info'
+          );
+          return;
+        }
+
+        showScanNotice('Analysiere Nährwerttabelle mit Gemini Vision…', 'info');
+
+        var prompt =
+          'Analysiere diese deutsche oder europäische Nährwerttabelle exakt und ungerundet. ' +
+          'Extrahiere productName (Produktname falls sichtbar, sonst ""), ' +
+          'referenceType ("100g" für pro 100 g / 100 ml oder "portion" für pro Portion/Packung), ' +
+          'portionGrams (Gramm pro Portion falls angegeben, sonst 0), ' +
+          'kcal (NUR Kilokalorien kcal, IGNORIERE kJ komplett!), ' +
+          'fett (Fett in g), kh (Kohlenhydrate in g), zucker (davon Zucker in g) und ew (Eiweiß/Protein in g).';
+
+        callGeminiEndpoint(key, model, prompt, scanObj.base64)
+          .then(function (json) {
+            var rawText = json && json.candidates && json.candidates[0] &&
+              json.candidates[0].content && json.candidates[0].content.parts &&
+              json.candidates[0].content.parts[0] && json.candidates[0].content.parts[0].text;
+            if (!rawText) {
+              throw new Error('Leere Antwort von Gemini');
+            }
+            fillFormFromGemini(JSON.parse(rawText));
+          })
+          .catch(function (err) {
+            showScanNotice(
+              'Foto wurde geladen! ' + describeGeminiError(err, model) + ' Du kannst es oben erneut versuchen oder die Werte darunter eintragen.',
+              'info'
+            );
+          });
+      }
+
+      // Navigation & Mutations
+      function switchTab(tabId) {
+        stopLiveCamera();
+        var btns = document.querySelectorAll('.nav-tab-btn');
+        for (var i = 0; i < btns.length; i++) {
+          if (btns[i].getAttribute('data-tab') === tabId) {
+            btns[i].classList.add('active');
+          } else {
+            btns[i].classList.remove('active');
+          }
+        }
+        var sections = document.querySelectorAll('.tab-section');
+        for (var j = 0; j < sections.length; j++) {
+          if (sections[j].id === tabId) {
+            sections[j].classList.add('active');
+          } else {
+            sections[j].classList.remove('active');
+          }
+        }
+      }
+
+      function addMealToDay(mealObj) {
+        if (!Array.isArray(appState.days[currentDate])) {
+          appState.days[currentDate] = [];
+        }
+        appState.days[currentDate].push({
+          id: 'entry-' + Date.now() + '-' + Math.floor(Math.random() * 10000),
+          name: (mealObj.name || 'Mahlzeit').trim(),
+          kcal: roundDec(mealObj.kcal, 1),
+          fett: roundDec(mealObj.fett, 2),
+          kh: roundDec(mealObj.kh, 2),
+          zucker: roundDec(mealObj.zucker, 2),
+          ew: roundDec(mealObj.ew, 2),
+          gewicht: mealObj.gewicht || 1,
+          einheit: mealObj.einheit || 'Portion'
+        });
+        saveState(appState);
+        renderPlanTab();
+      }
+
+      function addFavoriteItem(favObj) {
+        appState.favorites.unshift({
+          id: 'fav-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+          name: (favObj.name || 'Favorit').trim(),
+          kcal: roundDec(favObj.kcal, 1),
+          fett: roundDec(favObj.fett, 2),
+          kh: roundDec(favObj.kh, 2),
+          zucker: roundDec(favObj.zucker, 2),
+          ew: roundDec(favObj.ew, 2),
+          basis: 'portion',
+          refAmount: 1,
+          standard: 1
+        });
+        saveState(appState);
+        renderFavoritesList();
+      }
+
+      function parseBackup(rawJsonText) {
+        var imported = JSON.parse(rawJsonText);
+        if (!imported || typeof imported !== 'object' || !imported.days || typeof imported.days !== 'object') {
+          throw new Error('Ungültige Backup-Struktur');
+        }
+        var next = normalizeState(imported);
+        // Lokale Einstellungen behalten, wenn das Backup sie nicht enthält
+        if (!next.customApiKey) next.customApiKey = appState.customApiKey || '';
+        if (typeof imported.geminiModel !== 'string') next.geminiModel = appState.geminiModel;
+        next.meta = appState.meta;
+        return next;
+      }
+
+      function requestImport(rawText, afterApply) {
+        var next;
+        try {
+          next = parseBackup(rawText);
+        } catch (err) {
+          showToast('Ungültiges Backup – Import abgebrochen.');
+          return false;
+        }
+        var dayCount = 0;
+        var mealCount = 0;
+        Object.keys(next.days).forEach(function (k) {
+          if (next.days[k].length > 0) {
+            dayCount++;
+            mealCount += next.days[k].length;
+          }
+        });
+        askConfirm(
+          'Backup importieren?',
+          'Dein aktueller Stand wird ersetzt durch: ' + dayCount + ' Tage mit Einträgen (' + mealCount + ' Mahlzeiten) und ' +
+            next.favorites.length + ' Favoriten. Direkt danach kannst du den Import noch rückgängig machen.',
+          'Importieren',
+          function () {
+            var previous = appState;
+            appState = next;
+            saveState(appState);
+            renderAll();
+            if (afterApply) afterApply();
+            showToast('JSON-Backup importiert!', {
+              label: 'Rückgängig',
+              fn: function () {
+                appState = previous;
+                saveState(appState);
+                renderAll();
+                showToast('Import rückgängig gemacht.');
+              }
+            }, 8000);
+          }
+        );
+        return true;
+      }
+
+      function bindEvents() {
+        // Tabs
+        var tabBtns = document.querySelectorAll('.nav-tab-btn');
+        for (var i = 0; i < tabBtns.length; i++) {
+          tabBtns[i].addEventListener('click', function () {
+            switchTab(this.getAttribute('data-tab'));
+          });
+        }
+
+        document.getElementById('btn-open-add-tab').addEventListener('click', function () {
+          resetEditingState();
+          switchTab('tab-add');
+        });
+
+        document.getElementById('btn-open-key-settings').addEventListener('click', function () {
+          switchTab('tab-settings');
+          var card = document.getElementById('apikey-settings-card');
+          if (card) card.scrollIntoView({ behavior: 'smooth' });
+        });
+
+        // Date Navigation
+        document.getElementById('btn-prev-day').addEventListener('click', function () {
+          currentDate = shiftDateIso(currentDate, -1);
+          renderHeader();
+          renderPlanTab();
+        });
+
+        document.getElementById('btn-next-day').addEventListener('click', function () {
+          currentDate = shiftDateIso(currentDate, 1);
+          renderHeader();
+          renderPlanTab();
+        });
+
+        document.getElementById('btn-jump-today').addEventListener('click', function () {
+          currentDate = todayIso();
+          renderHeader();
+          renderPlanTab();
+          showToast('Heute: ' + formatFullDateDe(currentDate));
+        });
+
+        document.getElementById('date-picker').addEventListener('change', function (e) {
+          if (e.target.value) {
+            currentDate = e.target.value;
+            renderHeader();
+            renderPlanTab();
+          }
+        });
+
+        // Wochenübersicht: Tag antippen
+        document.getElementById('week-rows').addEventListener('click', function (e) {
+          var row = e.target.closest('[data-week-date]');
+          if (!row) return;
+          currentDate = row.getAttribute('data-week-date');
+          renderHeader();
+          renderPlanTab();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Backup-Erinnerung
+        document.getElementById('btn-backup-now').addEventListener('click', function () {
+          switchTab('tab-settings');
+          var card = document.getElementById('backup-card');
+          if (card) card.scrollIntoView({ behavior: 'smooth' });
+        });
+        document.getElementById('btn-backup-snooze').addEventListener('click', function () {
+          appState.meta.snoozeUntil = Date.now() + BACKUP_SNOOZE_DAYS * DAY_MS;
+          saveState(appState);
+          renderBackupBanner();
+        });
+
+        // Bestätigungs-Dialog
+        document.getElementById('btn-confirm-cancel').addEventListener('click', closeConfirm);
+        document.getElementById('btn-confirm-ok').addEventListener('click', function () {
+          var cb = confirmCallback;
+          closeConfirm();
+          if (cb) cb();
+        });
+
+        // Morgenroutine
+        document.getElementById('btn-add-mr').addEventListener('click', function () {
+          addMealToDay(appState.morningRoutine);
+          switchTab('tab-plan');
+          showToast('Morgenroutine eingefügt!');
+        });
+
+        // Activity & Strength Live Inputs
+        function handleActivityOrStrengthChange() {
+          var actVal = parseDeNumber(document.getElementById('day-activity-input').value);
+          var strVal = parseDeNumber(document.getElementById('day-strength-input').value);
+          setDayMetrics(currentDate, actVal, strVal, true);
+          renderPlanTab();
+        }
+
+        function finishActivityEdit() {
+          flushPendingSave();
+          var m = getDayMetrics(currentDate);
+          document.getElementById('day-activity-input').value = fmtDe(m.activityKcal, 0);
+          document.getElementById('day-strength-input').value = fmtDe(m.strengthKcal, 0);
+        }
+
+        document.getElementById('day-activity-input').addEventListener('input', handleActivityOrStrengthChange);
+        document.getElementById('day-strength-input').addEventListener('input', handleActivityOrStrengthChange);
+        document.getElementById('day-activity-input').addEventListener('change', finishActivityEdit);
+        document.getElementById('day-strength-input').addEventListener('change', finishActivityEdit);
+
+        document.getElementById('btn-reset-day-activity').addEventListener('click', function () {
+          var baseAct = typeof appState.goals.baseActivityKcal === 'number' ? appState.goals.baseActivityKcal : 1100.0;
+          setDayMetrics(currentDate, baseAct, 0);
+          document.getElementById('day-activity-input').value = fmtDe(baseAct, 0);
+          document.getElementById('day-strength-input').value = '0';
+          renderPlanTab();
+          showToast('Aktivität & Krafttraining für diesen Tag zurückgesetzt.');
+        });
+
+        // Meals List Edit & Delete
+        document.getElementById('meals-list').addEventListener('click', function (e) {
+          var editBtn = e.target.closest('[data-edit-meal]');
+          if (editBtn) {
+            openEditMeal(editBtn.getAttribute('data-edit-meal'));
+            return;
+          }
+          var delBtn = e.target.closest('[data-del-meal]');
+          if (delBtn) {
+            var id = delBtn.getAttribute('data-del-meal');
+            var delDate = currentDate;
+            var list = appState.days[delDate] || [];
+            var delIdx = -1;
+            for (var d = 0; d < list.length; d++) {
+              if (list[d].id === id) { delIdx = d; break; }
+            }
+            if (delIdx < 0) return;
+            var removed = list[delIdx];
+            appState.days[delDate] = list.filter(function (m) {
+              return m.id !== id;
+            });
+            if (editingMealId === id) resetEditingState();
+            saveState(appState);
+            renderPlanTab();
+            showToast('Mahlzeit gelöscht.', {
+              label: 'Rückgängig',
+              fn: function () {
+                if (!Array.isArray(appState.days[delDate])) appState.days[delDate] = [];
+                var cur = appState.days[delDate];
+                cur.splice(Math.min(delIdx, cur.length), 0, removed);
+                saveState(appState);
+                renderPlanTab();
+                showToast('Mahlzeit wiederhergestellt.');
+              }
+            });
+          }
+        });
+
+        // Calculator Mode & Live Inputs
+        document.getElementById('mode-100g').addEventListener('click', function () {
+          setCalcMode('100g');
+        });
+        document.getElementById('mode-portion').addEventListener('click', function () {
+          setCalcMode('portion');
+        });
+
+        document.getElementById('btn-cancel-edit').addEventListener('click', function () {
+          resetEditingState();
+          document.getElementById('calc-form').reset();
+          setCalcMode('100g');
+          showToast('Bearbeitung abgebrochen.');
+        });
+
+        var calcIds = ['calc-ref-amount', 'calc-actual-amount', 'calc-kcal', 'calc-fat', 'calc-carbs', 'calc-sugar', 'calc-protein'];
+        for (var c = 0; c < calcIds.length; c++) {
+          document.getElementById(calcIds[c]).addEventListener('input', updateCalcLivePreview);
+        }
+
+        document.getElementById('calc-form').addEventListener('submit', function (e) {
+          e.preventDefault();
+          var rawName = document.getElementById('calc-name').value.trim();
+          if (!rawName) {
+            showToast('Bitte Bezeichnung eingeben.');
+            return;
+          }
+          var calc = getCalculatedMacros();
+          var saveFavAlso = document.getElementById('calc-save-fav-check').checked;
+
+          // Falls die bearbeitete Mahlzeit an diesem Tag nicht (mehr) existiert: als neue Mahlzeit anlegen
+          if (editingMealId) {
+            var editExists = (appState.days[currentDate] || []).some(function (m) { return m.id === editingMealId; });
+            if (!editExists) resetEditingState();
+          }
+
+          if (editingMealId) {
+            var list = appState.days[currentDate] || [];
+            for (var i = 0; i < list.length; i++) {
+              if (list[i].id === editingMealId) {
+                list[i] = {
+                  id: editingMealId,
+                  name: rawName,
+                  kcal: calc.kcal,
+                  fett: calc.fett,
+                  kh: calc.kh,
+                  zucker: calc.zucker,
+                  ew: calc.ew,
+                  gewicht: calc.gewicht,
+                  einheit: calc.einheit
+                };
+                break;
+              }
+            }
+            saveState(appState);
+            if (saveFavAlso) {
+              addFavoriteItem({
+                name: rawName,
+                kcal: calc.kcal,
+                fett: calc.fett,
+                kh: calc.kh,
+                zucker: calc.zucker,
+                ew: calc.ew
+              });
+            }
+            renderPlanTab();
+            resetEditingState();
+            document.getElementById('calc-save-fav-check').checked = false;
+            showToast('Mahlzeit aktualisiert!');
+            switchTab('tab-plan');
+            return;
+          }
+
+          var displayName = rawName;
+          if (calcMode === '100g' && calc.gewicht > 0 && rawName.indexOf('(') === -1) {
+            displayName = rawName + ' (' + fmtDe(calc.gewicht, 0) + ' g)';
+          } else if (calcMode === 'portion' && calc.gewicht !== 1 && rawName.indexOf('(') === -1) {
+            displayName = rawName + ' (' + fmtDe(calc.gewicht, 2) + ' Portionen)';
+          }
+
+          addMealToDay({
+            name: displayName,
+            kcal: calc.kcal,
+            fett: calc.fett,
+            kh: calc.kh,
+            zucker: calc.zucker,
+            ew: calc.ew,
+            gewicht: calc.gewicht,
+            einheit: calc.einheit
+          });
+
+          if (saveFavAlso) {
+            addFavoriteItem({
+              name: displayName,
+              kcal: calc.kcal,
+              fett: calc.fett,
+              kh: calc.kh,
+              zucker: calc.zucker,
+              ew: calc.ew
+            });
+            document.getElementById('calc-save-fav-check').checked = false;
+          }
+
+          showToast(saveFavAlso ? 'Zum Tagesplan & Favoriten hinzugefügt!' : 'Zum Tagesplan hinzugefügt!');
+          switchTab('tab-plan');
+        });
+
+        document.getElementById('btn-save-favorite').addEventListener('click', function () {
+          var rawName = document.getElementById('calc-name').value.trim();
+          if (!rawName) {
+            showToast('Bitte zuerst Bezeichnung eingeben.');
+            return;
+          }
+          var calc = getCalculatedMacros();
+          var displayName = rawName;
+          if (calcMode === '100g' && calc.gewicht > 0 && rawName.indexOf('(') === -1) {
+            displayName = rawName + ' (' + fmtDe(calc.gewicht, 0) + ' g)';
+          }
+          addFavoriteItem({
+            name: displayName,
+            kcal: calc.kcal,
+            fett: calc.fett,
+            kh: calc.kh,
+            zucker: calc.zucker,
+            ew: calc.ew
+          });
+          showToast('Als Favorit gespeichert!');
+        });
+
+        // Favorites Interactions
+        document.getElementById('favorites-list').addEventListener('click', function (e) {
+          var addBtn = e.target.closest('[data-add-fav]');
+          if (addBtn) {
+            var favId = addBtn.getAttribute('data-add-fav');
+            var fav = appState.favorites.find(function (f) { return f.id === favId; });
+            if (fav) {
+              addMealToDay({
+                name: fav.name,
+                kcal: fav.kcal,
+                fett: fav.fett,
+                kh: fav.kh,
+                zucker: fav.zucker,
+                ew: fav.ew,
+                gewicht: fav.standard || 1,
+                einheit: fav.basis === '100g' ? 'g' : 'Portion'
+              });
+              showToast('"' + fav.name + '" hinzugefügt!');
+              switchTab('tab-plan');
+            }
+            return;
+          }
+
+          var loadBtn = e.target.closest('[data-load-fav]');
+          if (loadBtn) {
+            var loadId = loadBtn.getAttribute('data-load-fav');
+            var item = appState.favorites.find(function (f) { return f.id === loadId; });
+            if (item) {
+              resetEditingState();
+              setCalcMode(item.basis === '100g' ? '100g' : 'portion');
+              document.getElementById('calc-name').value = item.name;
+              document.getElementById('calc-kcal').value = fmtDe(item.kcal, 1);
+              document.getElementById('calc-fat').value = fmtDe(item.fett, 2);
+              document.getElementById('calc-carbs').value = fmtDe(item.kh, 2);
+              document.getElementById('calc-sugar').value = fmtDe(item.zucker, 2);
+              document.getElementById('calc-protein').value = fmtDe(item.ew, 2);
+              updateCalcLivePreview();
+              document.getElementById('calculator-card').scrollIntoView({ behavior: 'smooth' });
+              showToast('Favorit in Rechner geladen.');
+            }
+            return;
+          }
+
+          var delBtn = e.target.closest('[data-del-fav]');
+          if (delBtn) {
+            var delId = delBtn.getAttribute('data-del-fav');
+            var favIdx = -1;
+            for (var fi = 0; fi < appState.favorites.length; fi++) {
+              if (appState.favorites[fi].id === delId) { favIdx = fi; break; }
+            }
+            if (favIdx < 0) return;
+            var removedFav = appState.favorites[favIdx];
+            appState.favorites = appState.favorites.filter(function (f) { return f.id !== delId; });
+            saveState(appState);
+            renderFavoritesList();
+            showToast('Favorit entfernt.', {
+              label: 'Rückgängig',
+              fn: function () {
+                appState.favorites.splice(Math.min(favIdx, appState.favorites.length), 0, removedFav);
+                saveState(appState);
+                renderFavoritesList();
+                showToast('Favorit wiederhergestellt.');
+              }
+            });
+          }
+        });
+
+        // Camera & Gallery Scanner Events
+        document.getElementById('btn-start-camera').addEventListener('click', startLiveCamera);
+        document.getElementById('btn-stop-camera').addEventListener('click', stopLiveCamera);
+
+        document.getElementById('btn-capture-photo').addEventListener('click', function () {
+          var video = document.getElementById('camera-video');
+          if (!video || !video.videoWidth) {
+            showScanNotice('Kamerabild noch nicht bereit, bitte einen Moment warten.', 'error');
+            return;
+          }
+          var compressed = compressToJpeg1280(video, video.videoWidth, video.videoHeight);
+          stopLiveCamera();
+          analyzeWithGeminiVision(compressed);
+        });
+
+        document.getElementById('gallery-upload-input').addEventListener('change', function (e) {
+          var file = e.target.files && e.target.files[0];
+          if (!file) return;
+          stopLiveCamera();
+          showScanNotice('Foto wird komprimiert…', 'info');
+          processImageFile(file, function (err, compressed) {
+            e.target.value = '';
+            if (err) {
+              showScanNotice(err.message || 'Bild konnte nicht verarbeitet werden.', 'error');
+              return;
+            }
+            analyzeWithGeminiVision(compressed);
+          });
+        });
+
+        document.getElementById('btn-retry-gemini').addEventListener('click', function () {
+          if (lastCompressedScan) {
+            analyzeWithGeminiVision(lastCompressedScan);
+          }
+        });
+
+        document.getElementById('btn-clear-scan').addEventListener('click', function () {
+          stopLiveCamera();
+          lastCompressedScan = null;
+          document.getElementById('scan-preview-img').src = '';
+          document.getElementById('scan-preview-card').classList.add('hidden');
+          document.getElementById('btn-clear-scan').classList.add('hidden');
+          document.getElementById('scan-notice').classList.add('hidden');
+        });
+
+        // Settings Forms
+        document.getElementById('btn-calc-goal-kcal').addEventListener('click', function () {
+          var fat = parseDeNumber(document.getElementById('goal-in-fat').value);
+          var kh = parseDeNumber(document.getElementById('goal-in-kh').value);
+          var ew = parseDeNumber(document.getElementById('goal-in-ew').value);
+          var kcal = roundDec(ew * 4 + kh * 4 + fat * 9, 1);
+          document.getElementById('goal-in-kcal').value = fmtDe(kcal, 1);
+          showToast('Kalorienziel aus Makros berechnet.');
+        });
+
+        document.getElementById('goals-form').addEventListener('submit', function (e) {
+          e.preventDefault();
+          appState.goals = {
+            kcal: roundDec(parseDeNumber(document.getElementById('goal-in-kcal').value), 1),
+            baseActivityKcal: roundDec(parseDeNumber(document.getElementById('goal-in-base-act').value), 1),
+            ew: roundDec(parseDeNumber(document.getElementById('goal-in-ew').value), 2),
+            kh: roundDec(parseDeNumber(document.getElementById('goal-in-kh').value), 2),
+            zucker: roundDec(parseDeNumber(document.getElementById('goal-in-sugar').value), 2),
+            fett: roundDec(parseDeNumber(document.getElementById('goal-in-fat').value), 2)
+          };
+          saveState(appState);
+          renderPlanTab();
+          showToast('Basis-Tagesziele gespeichert!');
+        });
+
+        document.getElementById('mr-form').addEventListener('submit', function (e) {
+          e.preventDefault();
+          appState.morningRoutine = {
+            name: document.getElementById('mr-in-name').value.trim() || DEFAULT_MORNING_ROUTINE.name,
+            kcal: roundDec(parseDeNumber(document.getElementById('mr-in-kcal').value), 1),
+            fett: roundDec(parseDeNumber(document.getElementById('mr-in-fat').value), 2),
+            kh: roundDec(parseDeNumber(document.getElementById('mr-in-kh').value), 2),
+            zucker: roundDec(parseDeNumber(document.getElementById('mr-in-sugar').value), 2),
+            ew: roundDec(parseDeNumber(document.getElementById('mr-in-ew').value), 2),
+            gewicht: 1,
+            einheit: 'Portion'
+          };
+          saveState(appState);
+          showToast('Standard-Morgenroutine gespeichert!');
+        });
+
+        // Gemini API-Key & Modell speichern / testen
+        document.getElementById('apikey-form').addEventListener('submit', function (e) {
+          e.preventDefault();
+          appState.customApiKey = document.getElementById('custom-apikey-input').value.trim();
+          appState.geminiModel = cleanModelName(document.getElementById('gemini-model-input').value);
+          saveState(appState);
+          renderSettingsTab();
+          showToast(appState.customApiKey ? 'Gemini-Einstellungen gespeichert!' : 'API-Key entfernt.');
+        });
+
+        document.getElementById('btn-test-apikey').addEventListener('click', function () {
+          var notice = document.getElementById('apikey-test-notice');
+          var key = document.getElementById('custom-apikey-input').value.trim();
+          var model = cleanModelName(document.getElementById('gemini-model-input').value);
+
+          if (!key) {
+            notice.className = 'notice-box notice-error';
+            notice.textContent = 'Bitte zuerst einen API-Key eintragen.';
+            notice.classList.remove('hidden');
+            return;
+          }
+
+          notice.className = 'notice-box notice-info';
+          notice.textContent = 'Teste Verbindung zu ' + model + '…';
+          notice.classList.remove('hidden');
+
+          var testUrl = 'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent?key=' + encodeURIComponent(key);
+          fetch(testUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: 'Antworte mit OK' }] }]
+            })
+          }).then(function (res) {
+            if (res.ok) {
+              notice.className = 'notice-box notice-success';
+              notice.textContent = 'Verbindung erfolgreich! ' + model + ' ist einsatzbereit.';
+            } else if (res.status === 404) {
+              notice.className = 'notice-box notice-error';
+              notice.textContent = 'Das Modell "' + model + '" wurde nicht gefunden (HTTP 404). Bitte den Modellnamen prüfen.';
+            } else {
+              notice.className = 'notice-box notice-error';
+              notice.textContent = 'Antwort HTTP ' + res.status + ': Bitte einen gültigen Google Gemini API-Key eintragen.';
+            }
+          }).catch(function () {
+            notice.className = 'notice-box notice-error';
+            notice.textContent = navigator.onLine === false ? 'Du bist offline.' : 'Netzwerkfehler beim Verbindungstest.';
+          });
+        });
+
+        // JSON Backup Export & Import
+        function backupJsonText() {
+          return JSON.stringify(buildExportObject(), null, 2);
+        }
+
+        function markBackupDone() {
+          appState.meta.lastBackupAt = Date.now();
+          appState.meta.snoozeUntil = 0;
+          saveState(appState);
+          renderBackupBanner();
+          renderBackupStatus();
+        }
+
+        document.getElementById('btn-export-json').addEventListener('click', function () {
+          try {
+            var blob = new Blob([backupJsonText()], { type: 'application/json' });
+            var url = URL.createObjectURL(blob);
+            var link = document.createElement('a');
+            link.href = url;
+            link.download = 'essensplan_backup_' + todayIso() + '.json';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+            markBackupDone();
+            showToast('JSON-Backup heruntergeladen!');
+          } catch (err) {
+            copyTextToClipboard(backupJsonText(), 'JSON-Backup in Zwischenablage kopiert!', markBackupDone);
+          }
+        });
+
+        document.getElementById('btn-copy-json').addEventListener('click', function () {
+          copyTextToClipboard(backupJsonText(), 'JSON-Backup in Zwischenablage kopiert!', markBackupDone);
+        });
+
+        document.getElementById('import-json-input').addEventListener('change', function (e) {
+          var file = e.target.files && e.target.files[0];
+          if (!file) return;
+          var reader = new FileReader();
+          reader.onload = function (ev) {
+            try {
+              requestImport(ev.target.result);
+            } finally {
+              e.target.value = '';
+            }
+          };
+          reader.onerror = function () {
+            showToast('Datei konnte nicht gelesen werden.');
+            e.target.value = '';
+          };
+          reader.readAsText(file);
+        });
+
+        // JSON Paste Modal
+        var jsonModal = document.getElementById('json-paste-modal');
+        document.getElementById('btn-open-paste-json').addEventListener('click', function () {
+          document.getElementById('json-paste-textarea').value = '';
+          jsonModal.classList.add('open');
+        });
+        document.getElementById('btn-paste-json-cancel').addEventListener('click', function () {
+          jsonModal.classList.remove('open');
+        });
+        document.getElementById('btn-paste-json-apply').addEventListener('click', function () {
+          var raw = document.getElementById('json-paste-textarea').value.trim();
+          if (!raw) {
+            showToast('Bitte zuerst JSON-Text einfügen.');
+            return;
+          }
+          requestImport(raw, function () {
+            jsonModal.classList.remove('open');
+          });
+        });
+
+        // Reset Modal
+        var resetModal = document.getElementById('reset-modal');
+        document.getElementById('btn-reset-defaults').addEventListener('click', function () {
+          resetModal.classList.add('open');
+        });
+        document.getElementById('btn-reset-cancel').addEventListener('click', function () {
+          resetModal.classList.remove('open');
+        });
+        document.getElementById('btn-reset-confirm').addEventListener('click', function () {
+          var previousState = appState;
+          appState = createDefaultState();
+          appState.customApiKey = previousState.customApiKey;
+          appState.geminiModel = previousState.geminiModel;
+          appState.meta = previousState.meta;
+          currentDate = todayIso();
+          saveState(appState);
+          renderAll();
+          resetModal.classList.remove('open');
+          showToast('App auf Standardwerte zurückgesetzt!');
+        });
+      }
+
+      bindEvents();
+      renderAll();
+      updateCalcLivePreview();
+
+      // Start-Tab per URL (App-Verknüpfung: ?tab=add)
+      try {
+        var startTab = new URLSearchParams(window.location.search).get('tab');
+        if (startTab === 'add') switchTab('tab-add');
+        else if (startTab === 'settings') switchTab('tab-settings');
+      } catch (err) {
+        // ignorieren
+      }
+
+      // Dauerhaften Speicher anfragen (schützt vor automatischem Löschen durch Android)
+      try {
+        if (navigator.storage && navigator.storage.persist) {
+          navigator.storage.persist().then(renderBackupStatus);
+        }
+      } catch (err) {
+        // ignorieren
+      }
+
+      // Tageswechsel: "Heute" bleibt tagesaktuell, auch wenn die App über Nacht offen bleibt
+      function checkDayChange() {
+        var now = todayIso();
+        if (now === lastTodayIso) return;
+        var wasOnToday = currentDate === lastTodayIso;
+        lastTodayIso = now;
+        if (wasOnToday) currentDate = now;
+        renderHeader();
+        renderPlanTab();
+      }
+
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'hidden') {
+          flushPendingSave();
+        } else {
+          checkDayChange();
+        }
+      });
+      window.addEventListener('pagehide', flushPendingSave);
+      setInterval(checkDayChange, 60000);
+
+      // Hell-/Dunkelmodus
+      var THEME_KEY = 'essensplan_theme';
+      var darkQuery = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+
+      function getThemePref() {
+        try {
+          var v = window.localStorage.getItem(THEME_KEY);
+          if (v === 'light' || v === 'dark') return v;
+        } catch (err) {
+          // ignorieren
+        }
+        return 'auto';
+      }
+
+      function applyTheme() {
+        var pref = getThemePref();
+        var dark = pref === 'dark' || (pref === 'auto' && !!(darkQuery && darkQuery.matches));
+        document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+        var meta = document.getElementById('meta-theme-color');
+        if (meta) meta.setAttribute('content', dark ? '#0b1220' : '#059669');
+        var toggle = document.getElementById('btn-theme-toggle');
+        if (toggle) {
+          toggle.setAttribute('aria-label', dark ? 'Zum hellen Modus wechseln' : 'Zum dunklen Modus wechseln');
+          toggle.setAttribute('aria-pressed', dark ? 'true' : 'false');
+        }
+      }
+
+      function setThemePref(pref) {
+        try {
+          if (pref === 'auto') {
+            window.localStorage.removeItem(THEME_KEY);
+          } else {
+            window.localStorage.setItem(THEME_KEY, pref);
+          }
+        } catch (err) {
+          // ignorieren
+        }
+        applyTheme();
+      }
+
+      document.getElementById('btn-theme-toggle').addEventListener('click', function () {
+        var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        setThemePref(isDark ? 'light' : 'dark');
+      });
+
+      if (darkQuery) {
+        var onSchemeChange = function () {
+          if (getThemePref() === 'auto') applyTheme();
+        };
+        if (darkQuery.addEventListener) {
+          darkQuery.addEventListener('change', onSchemeChange);
+        } else if (darkQuery.addListener) {
+          darkQuery.addListener(onSchemeChange);
+        }
+      }
+      applyTheme();
+
+      // Service Worker (Offline-Betrieb + Update-Hinweis)
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('sw.js').then(function (reg) {
+            function promptUpdate(worker) {
+              showToast('Neue Version verfügbar.', {
+                label: 'Aktualisieren',
+                fn: function () { worker.postMessage('SKIP_WAITING'); }
+              }, 15000);
+            }
+            if (reg.waiting && navigator.serviceWorker.controller) {
+              promptUpdate(reg.waiting);
+            }
+            reg.addEventListener('updatefound', function () {
+              var nw = reg.installing;
+              if (!nw) return;
+              nw.addEventListener('statechange', function () {
+                if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+                  promptUpdate(nw);
+                }
+              });
+            });
+          }).catch(function () {
+            // Registrierung nicht möglich (z. B. file://) – App läuft trotzdem
+          });
+
+          var reloading = false;
+          navigator.serviceWorker.addEventListener('controllerchange', function () {
+            if (reloading) return;
+            reloading = true;
+            window.location.reload();
+          });
+        });
+      }
+    });
+  </script>
+</body>
+</html>
