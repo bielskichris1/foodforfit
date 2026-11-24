@@ -1024,6 +1024,7 @@
     }
 
     #scan-notice,
+    #estimate-notice,
     #apikey-test-notice {
       white-space: pre-line;
     }
@@ -1477,6 +1478,22 @@
         <div id="scan-notice" class="notice-box notice-info hidden"></div>
       </div>
 
+      <!-- KI-Schätzung für Lebensmittel ohne Etikett -->
+      <div class="card" id="estimate-card">
+        <div class="card-head">
+          <h2 class="card-title">Ohne Etikett: KI-Schätzung</h2>
+        </div>
+        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 10px;">
+          Für Gemüse, Eier, Fleisch &amp; Co. Beschreibe die Mahlzeit mit Mengen – Gemini schätzt die Nährwerte und trägt die Summe in den Rechner ein.
+        </p>
+        <div class="field">
+          <label for="estimate-input">Was hast du gegessen?</label>
+          <textarea id="estimate-input" class="input" rows="3" style="resize: vertical; min-height: 76px;" placeholder="z. B. 3 Eier (Gr. M), 200 g Brokkoli gedünstet, 1 TL Olivenöl"></textarea>
+        </div>
+        <button type="button" id="btn-estimate" class="btn btn-primary" style="width: 100%;">Nährwerte schätzen</button>
+        <div id="estimate-notice" class="notice-box notice-info hidden"></div>
+      </div>
+
       <!-- Exakter Etiketten- & Portionsrechner -->
       <div class="card" id="calculator-card">
         <div class="card-head">
@@ -1504,6 +1521,11 @@
               <label id="lbl-actual-amount" for="calc-actual-amount">Abgewogenes Gewicht in g *</label>
               <input type="text" inputmode="decimal" id="calc-actual-amount" class="input" value="100" />
             </div>
+          </div>
+
+          <div class="field">
+            <label for="calc-portion-grams">Portionsgröße in g (optional – rechnet beim Wechsel 100 g ⇄ Portion automatisch um)</label>
+            <input type="text" inputmode="decimal" id="calc-portion-grams" class="input" placeholder="z. B. 200" />
           </div>
 
           <div class="form-grid-3">
@@ -2602,6 +2624,55 @@
         updateCalcLivePreview();
       }
 
+      function getPortionGrams() {
+        var v = parseDeNumber(document.getElementById('calc-portion-grams').value);
+        return v > 0 ? v : 0;
+      }
+
+      var CALC_VALUE_FIELDS = [
+        { id: 'calc-kcal', digits: 1 },
+        { id: 'calc-fat', digits: 2 },
+        { id: 'calc-carbs', digits: 2 },
+        { id: 'calc-sugar', digits: 2 },
+        { id: 'calc-protein', digits: 2 }
+      ];
+
+      // Nutzer wechselt per Klick zwischen "pro 100 g" und "pro Portion": Werte mit Portionsgröße umrechnen
+      function switchCalcModeWithConversion(newMode) {
+        if (newMode === calcMode) return;
+        var oldMode = calcMode;
+        var portionG = getPortionGrams();
+        var ref = parseDeNumber(document.getElementById('calc-ref-amount').value);
+        if (!(ref > 0)) ref = oldMode === '100g' ? 100 : 1;
+
+        var hasValues = CALC_VALUE_FIELDS.some(function (f) {
+          return document.getElementById(f.id).value.trim() !== '';
+        });
+
+        var factor = null;
+        if (hasValues && portionG > 0) {
+          // 100 g -> Portion: Werte gelten für "ref" g, eine Portion hat portionG g
+          // Portion -> 100 g: Werte gelten für "ref" Portionen = ref * portionG g
+          factor = oldMode === '100g' ? portionG / ref : 100 / (ref * portionG);
+        }
+
+        setCalcMode(newMode);
+
+        if (factor !== null) {
+          CALC_VALUE_FIELDS.forEach(function (f) {
+            var el = document.getElementById(f.id);
+            if (el.value.trim() === '') return;
+            el.value = fmtDe(roundDec(parseDeNumber(el.value) * factor, f.digits), f.digits);
+          });
+          updateCalcLivePreview();
+          showToast(newMode === 'portion'
+            ? 'Umgerechnet auf 1 Portion (' + fmtDe(portionG, portionG % 1 ? 1 : 0) + ' g).'
+            : 'Umgerechnet auf 100 g.');
+        } else if (hasValues) {
+          showToast('Werte unverändert. Trage die Portionsgröße (g) ein, dann wird beim Wechsel umgerechnet.', null, 4500);
+        }
+      }
+
       function resetEditingState() {
         editingMealId = null;
         document.getElementById('calc-heading').textContent = 'Exakter Etiketten- & Portionsrechner';
@@ -2748,6 +2819,9 @@
         var isPortion = data.referenceType === 'portion';
         setCalcMode(isPortion ? 'portion' : '100g');
 
+        var scannedPortionG = typeof data.portionGrams === 'number' && data.portionGrams > 0 ? data.portionGrams : 0;
+        document.getElementById('calc-portion-grams').value = scannedPortionG > 0 ? fmtDe(scannedPortionG, scannedPortionG % 1 ? 1 : 0) : '';
+
         var prodName = data.productName ? String(data.productName).trim() : '';
         if (isPortion && typeof data.portionGrams === 'number' && data.portionGrams > 0) {
           document.getElementById('calc-ref-amount').value = '1';
@@ -2800,6 +2874,12 @@
           }
           var warns = checkPlausibility(data);
           var okMsg = 'Gemini Vision: ' + count + ' Nährwerte ausgelesen und in den Rechner übertragen! Gib jetzt dein abgewogenes Gewicht ein.';
+          if (scannedPortionG > 0) {
+            okMsg += '\n\nPortionsgröße erkannt: ' + fmtDe(scannedPortionG, scannedPortionG % 1 ? 1 : 0) + ' g. ' +
+              (isPortion
+                ? 'Beim Wechsel zu „Pro 100 g“ werden die Werte automatisch umgerechnet.'
+                : 'Beim Wechsel zu „Pro Portion“ werden die Werte automatisch auf diese Portion umgerechnet.');
+          }
           if (warns.length > 0) {
             showScanNotice(okMsg + '\n\n⚠ Bitte mit dem Foto vergleichen:\n• ' + warns.join('\n• '), 'warn');
             showToast('Gelesene Werte bitte prüfen!');
@@ -2815,6 +2895,127 @@
         } else {
           showScanNotice('Auf dem Foto konnte keine eindeutige Nährwerttabelle erkannt werden. Bitte Werte darunter eintragen.', 'error');
         }
+      }
+
+      var ESTIMATE_SCHEMA = {
+        type: 'OBJECT',
+        properties: {
+          mealName: { type: 'STRING' },
+          items: {
+            type: 'ARRAY',
+            items: {
+              type: 'OBJECT',
+              properties: {
+                name: { type: 'STRING' },
+                amount: { type: 'STRING' },
+                kcal: { type: 'NUMBER' },
+                fett: { type: 'NUMBER' },
+                kh: { type: 'NUMBER' },
+                zucker: { type: 'NUMBER' },
+                ew: { type: 'NUMBER' }
+              },
+              required: ['name', 'amount', 'kcal', 'fett', 'kh', 'zucker', 'ew']
+            }
+          }
+        },
+        required: ['mealName', 'items']
+      };
+
+      function showEstimateNotice(msg, level) {
+        var box = document.getElementById('estimate-notice');
+        box.className = 'notice-box notice-' + (level || 'info');
+        box.textContent = msg;
+        box.classList.remove('hidden');
+      }
+
+      // Schätzt Nährwerte für Lebensmittel ohne Etikett (Gemüse, Eier, Fleisch ...) per Text
+      function estimateWithGemini() {
+        var text = document.getElementById('estimate-input').value.trim();
+        var btn = document.getElementById('btn-estimate');
+        if (!text) {
+          showEstimateNotice('Bitte beschreibe zuerst, was du gegessen hast – am besten mit Mengen, z. B. "3 Eier (Gr. M) und 200 g Brokkoli".', 'error');
+          return;
+        }
+        var key = (appState.customApiKey || '').trim();
+        var model = appState.geminiModel || DEFAULT_GEMINI_MODEL;
+        if (!key) {
+          showEstimateNotice('Für die KI-Schätzung brauchst du einen eigenen Gemini API-Key. Trage ihn unter "Ziele & Backup" ein.', 'info');
+          return;
+        }
+
+        btn.disabled = true;
+        showEstimateNotice('Schätze Nährwerte mit Gemini…', 'info');
+
+        var prompt =
+          'Du bist ein Ernährungsexperte. Schätze die Nährwerte der folgenden Mahlzeit für GENAU die genannten Mengen. ' +
+          'Gib jede Zutat einzeln an (items) mit name, amount (Menge wie genannt) und den Nährwerten für diese Menge: ' +
+          'kcal (nur Kilokalorien, KEIN kJ), fett (g), kh (Kohlenhydrate in g), zucker (davon Zucker in g), ew (Eiweiß in g). ' +
+          'Regeln: Nimm die Mengen wörtlich. Fehlt eine Mengenangabe, nimm eine übliche Portion an und nenne sie in amount. ' +
+          'Fleisch, Fisch, Gemüse und Beilagen gelten als Rohgewicht, außer es steht gekocht, gebraten oder gedünstet dabei. ' +
+          'Eier Größe M wiegen etwa 58 g mit Schale (ca. 50 g essbar). Öl, Butter oder Soßen nur zählen, wenn sie genannt sind. ' +
+          'Nutze realistische Durchschnittswerte aus Standard-Nährwertdatenbanken (BLS/USDA). Lass keine genannte Zutat aus. ' +
+          'mealName ist eine kurze Bezeichnung der Mahlzeit auf Deutsch. ' +
+          'Mahlzeit: ' + text;
+
+        callGeminiWithFallback(key, model, prompt, null, ESTIMATE_SCHEMA)
+          .then(function (result) {
+            if (result.persist) {
+              appState.geminiModel = result.model;
+              saveState(appState);
+              showToast('Gemini-Modell automatisch auf "' + result.model + '" umgestellt.');
+            }
+            var json = result.json;
+            var rawText = json && json.candidates && json.candidates[0] &&
+              json.candidates[0].content && json.candidates[0].content.parts &&
+              json.candidates[0].content.parts[0] && json.candidates[0].content.parts[0].text;
+            if (!rawText) throw new Error('Leere Antwort von Gemini');
+            var data = JSON.parse(rawText);
+            var items = Array.isArray(data.items) ? data.items : [];
+            if (items.length === 0) throw new Error('Keine Zutaten erkannt');
+
+            function n(v) { return typeof v === 'number' && isFinite(v) && v > 0 ? v : 0; }
+            var tot = { kcal: 0, fett: 0, kh: 0, zucker: 0, ew: 0 };
+            var lines = items.map(function (it) {
+              tot.kcal += n(it.kcal);
+              tot.fett += n(it.fett);
+              tot.kh += n(it.kh);
+              tot.zucker += n(it.zucker);
+              tot.ew += n(it.ew);
+              return '• ' + (it.name || 'Zutat') + (it.amount ? ' (' + it.amount + ')' : '') + ': ' +
+                fmtDe(n(it.kcal), 0) + ' kcal, ' + fmtDe(n(it.ew), 1) + ' g EW, ' + fmtDe(n(it.kh), 1) + ' g KH, ' + fmtDe(n(it.fett), 1) + ' g Fett';
+            });
+
+            // Summe als "1 Portion" in den Rechner übernehmen
+            setCalcMode('portion');
+            document.getElementById('calc-portion-grams').value = '';
+            var name = data.mealName ? String(data.mealName).trim() : '';
+            document.getElementById('calc-name').value = name || text.slice(0, 60);
+            document.getElementById('calc-kcal').value = fmtDe(roundDec(tot.kcal, 1), 1);
+            document.getElementById('calc-fat').value = fmtDe(roundDec(tot.fett, 2), 2);
+            document.getElementById('calc-carbs').value = fmtDe(roundDec(tot.kh, 2), 2);
+            document.getElementById('calc-sugar').value = fmtDe(roundDec(tot.zucker, 2), 2);
+            document.getElementById('calc-protein').value = fmtDe(roundDec(tot.ew, 2), 2);
+            updateCalcLivePreview();
+
+            ['calc-name', 'calc-kcal', 'calc-fat', 'calc-carbs', 'calc-sugar', 'calc-protein'].forEach(function (id) {
+              var el = document.getElementById(id);
+              el.classList.add('input-flash');
+              setTimeout(function () { el.classList.remove('input-flash'); }, 2200);
+            });
+
+            var warns = checkPlausibility({ kcal: tot.kcal, fett: tot.fett, kh: tot.kh, zucker: tot.zucker, ew: tot.ew, referenceType: 'portion' });
+            var msg = 'Schätzwerte – bitte prüfen:\n' + lines.join('\n') +
+              '\n\nDie Summe steht jetzt als 1 Portion im Rechner. Du kannst die Werte dort noch anpassen.';
+            if (warns.length > 0) msg += '\n\n⚠ ' + warns.join('\n⚠ ');
+            showEstimateNotice(msg, warns.length > 0 ? 'warn' : 'success');
+            document.getElementById('calculator-card').scrollIntoView({ behavior: 'smooth' });
+          })
+          .catch(function (err) {
+            showEstimateNotice(describeGeminiError(err, err.model || model), 'error');
+          })
+          .then(function () {
+            btn.disabled = false;
+          });
       }
 
       function checkPlausibility(d) {
@@ -2846,39 +3047,33 @@
         return warns;
       }
 
-      function callGeminiEndpoint(apiKey, model, promptText, base64Jpeg) {
+      var LABEL_SCHEMA = {
+        type: 'OBJECT',
+        properties: {
+          productName: { type: 'STRING' },
+          referenceType: { type: 'STRING', enum: ['100g', 'portion'] },
+          portionGrams: { type: 'NUMBER' },
+          kcal: { type: 'NUMBER' },
+          fett: { type: 'NUMBER' },
+          kh: { type: 'NUMBER' },
+          zucker: { type: 'NUMBER' },
+          ew: { type: 'NUMBER' }
+        },
+        required: ['productName', 'referenceType', 'kcal', 'fett', 'kh', 'zucker', 'ew']
+      };
+
+      // base64Jpeg optional (reine Text-Anfrage, wenn leer); schema optional (Standard: Etiketten-Scan)
+      function callGeminiEndpoint(apiKey, model, promptText, base64Jpeg, schema) {
         var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent?key=' + encodeURIComponent(apiKey);
+        var parts = [{ text: promptText }];
+        if (base64Jpeg) {
+          parts.push({ inlineData: { mimeType: 'image/jpeg', data: base64Jpeg } });
+        }
         var bodyPayload = {
-          contents: [
-            {
-              role: 'user',
-              parts: [
-                { text: promptText },
-                {
-                  inlineData: {
-                    mimeType: 'image/jpeg',
-                    data: base64Jpeg
-                  }
-                }
-              ]
-            }
-          ],
+          contents: [{ role: 'user', parts: parts }],
           generationConfig: {
             responseMimeType: 'application/json',
-            responseSchema: {
-              type: 'OBJECT',
-              properties: {
-                productName: { type: 'STRING' },
-                referenceType: { type: 'STRING', enum: ['100g', 'portion'] },
-                portionGrams: { type: 'NUMBER' },
-                kcal: { type: 'NUMBER' },
-                fett: { type: 'NUMBER' },
-                kh: { type: 'NUMBER' },
-                zucker: { type: 'NUMBER' },
-                ew: { type: 'NUMBER' }
-              },
-              required: ['productName', 'referenceType', 'kcal', 'fett', 'kh', 'zucker', 'ew']
-            }
+            responseSchema: schema || LABEL_SCHEMA
           }
         };
 
@@ -2909,11 +3104,11 @@
         return status === 500 || status === 502 || status === 503 || status === 504;
       }
 
-      function callGeminiWithFallback(apiKey, model, promptText, base64Jpeg) {
+      function callGeminiWithFallback(apiKey, model, promptText, base64Jpeg, schema) {
         var candidates = geminiCandidates(model);
         // allNotFound: bisher nur "404"-Fehler -> funktionierendes Modell darf dauerhaft gespeichert werden
         function attempt(i, allNotFound, retried) {
-          return callGeminiEndpoint(apiKey, candidates[i], promptText, base64Jpeg).then(
+          return callGeminiEndpoint(apiKey, candidates[i], promptText, base64Jpeg, schema).then(
             function (json) {
               return { json: json, model: candidates[i], persist: allNotFound && i > 0 };
             },
@@ -2978,7 +3173,7 @@
           'Analysiere diese deutsche oder europäische Nährwerttabelle exakt und ungerundet. ' +
           'Extrahiere productName (Produktname falls sichtbar, sonst ""), ' +
           'referenceType ("100g" für pro 100 g / 100 ml oder "portion" für pro Portion/Packung), ' +
-          'portionGrams (Gramm pro Portion falls angegeben, sonst 0), ' +
+          'portionGrams (Gramm pro angegebener Portion bzw. pro Becher/Packung/Stück, z. B. "1 Portion = 200 g" oder "Inhalt 200 g" – nur wenn auf dem Etikett genannt, sonst 0), ' +
           'kcal (NUR Kilokalorien kcal, IGNORIERE kJ komplett!), ' +
           'fett (Fett in g), kh (Kohlenhydrate in g), zucker (davon Zucker in g) und ew (Eiweiß/Protein in g).';
 
@@ -3271,11 +3466,12 @@
 
         // Calculator Mode & Live Inputs
         document.getElementById('mode-100g').addEventListener('click', function () {
-          setCalcMode('100g');
+          switchCalcModeWithConversion('100g');
         });
         document.getElementById('mode-portion').addEventListener('click', function () {
-          setCalcMode('portion');
+          switchCalcModeWithConversion('portion');
         });
+        document.getElementById('btn-estimate').addEventListener('click', estimateWithGemini);
 
         document.getElementById('btn-cancel-edit').addEventListener('click', function () {
           resetEditingState();

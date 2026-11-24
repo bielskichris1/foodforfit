@@ -39,6 +39,14 @@ Unter *Ziele & Backup → Gemini Vision API-Key* den eigenen Key (kostenlos in G
 
 Standardmodell ist `gemini-3.8-flash`. Meldet Google „Modell nicht gefunden“ (HTTP 404), probiert die App automatisch aktuelle Alternativen durch und merkt sich das funktionierende Modell. Bei Bedarf lässt sich der Modellname im gleichen Bereich von Hand ändern.
 
+## Lebensmittel ohne Etikett (Gemüse, Eier, Fleisch)
+
+Unter *Hinzufügen & Scan → Ohne Etikett: KI-Schätzung* die Mahlzeit mit Mengen beschreiben, z. B. „3 Eier (Gr. M), 200 g Brokkoli gedünstet, 1 TL Olivenöl“. Gemini schätzt jede Zutat einzeln, die Summe landet als 1 Portion im Rechner und lässt sich dort noch anpassen. Es sind Schätzwerte – bei genauem Tracking lieber wiegen und mit Datenbankwerten rechnen.
+
+## Portionsgröße
+
+Beim Etiketten-Scan wird eine angegebene Portionsgröße (z. B. „Portion = 200 g“) erkannt und im Feld *Portionsgröße* eingetragen. Beim Wechsel zwischen „Pro 100 g“ und „Pro Portion“ werden die Werte dann automatisch umgerechnet. Das Feld lässt sich auch von Hand ausfüllen.
+
 ## Updates einspielen
 
 Geänderte Dateien einfach im Repository ersetzen. Die App holt die neue Version beim nächsten Start im Hintergrund und zeigt dann den Hinweis „Neue Version verfügbar“ mit einem Button zum Aktualisieren. Ein Hochzählen der Version in `sw.js` ist nicht nötig.
