@@ -1656,8 +1656,8 @@
             <input type="password" id="custom-apikey-input" class="input" placeholder="AIza..." autocomplete="off" />
           </div>
           <div class="field">
-            <label for="gemini-model-input">Modell (falls Google das Standard-Modell abkündigt)</label>
-            <input type="text" id="gemini-model-input" class="input" placeholder="gemini-2.5-flash" autocomplete="off" autocapitalize="off" spellcheck="false" />
+            <label for="gemini-model-input">Modell (wird bei Fehlern automatisch gewechselt)</label>
+            <input type="text" id="gemini-model-input" class="input" placeholder="gemini-3.8-flash" autocomplete="off" autocapitalize="off" spellcheck="false" />
           </div>
           <div class="action-grid-2" style="margin-bottom: 0;">
             <button type="submit" class="btn btn-primary">Speichern</button>
@@ -1740,7 +1740,11 @@
       'use strict';
 
       var STORAGE_KEY = 'essensplan_tracker_v2_stable';
-      var DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
+      var DEFAULT_GEMINI_MODEL = 'gemini-3.8-flash';
+      // Wird bei "Modell nicht gefunden" (HTTP 404) der Reihe nach automatisch probiert
+      var GEMINI_FALLBACK_MODELS = ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite'];
+      // Früheres Standardmodell: für neue Google-Konten nicht mehr verfügbar
+      var LEGACY_DEFAULT_MODEL = 'gemini-2.5-flash';
       var BACKUP_REMINDER_DAYS = 7;
       var BACKUP_SNOOZE_DAYS = 3;
       var DAY_MS = 24 * 60 * 60 * 1000;
@@ -1933,7 +1937,7 @@
         }
         return {
           customApiKey: typeof p.customApiKey === 'string' ? p.customApiKey.trim() : '',
-          geminiModel: cleanModelName(p.geminiModel),
+          geminiModel: cleanModelName(p.geminiModel) === LEGACY_DEFAULT_MODEL ? DEFAULT_GEMINI_MODEL : cleanModelName(p.geminiModel),
           meta: sanitizeMeta(p.meta),
           goals: sanitizeGoals(p.goals),
           morningRoutine: sanitizeMorningRoutine(p.morningRoutine),
@@ -2892,7 +2896,46 @@
         });
       }
 
-      function describeGeminiError(err, model) {
+      // Probiert bei HTTP 404 (Modell unbekannt/gesperrt) automatisch die nächsten Modelle der Ausweichliste
+      function geminiCandidates(first) {
+        var list = [first];
+        GEMINI_FALLBACK_MODELS.forEach(function (m) {
+          if (list.indexOf(m) === -1) list.push(m);
+        });
+        return list;
+      }
+
+      function isServerBusy(status) {
+        return status === 500 || status === 502 || status === 503 || status === 504;
+      }
+
+      function callGeminiWithFallback(apiKey, model, promptText, base64Jpeg) {
+        var candidates = geminiCandidates(model);
+        // allNotFound: bisher nur "404"-Fehler -> funktionierendes Modell darf dauerhaft gespeichert werden
+        function attempt(i, allNotFound, retried) {
+          return callGeminiEndpoint(apiKey, candidates[i], promptText, base64Jpeg).then(
+            function (json) {
+              return { json: json, model: candidates[i], persist: allNotFound && i > 0 };
+            },
+            function (err) {
+              var st = err && err.status;
+              if (isServerBusy(st) && !retried) {
+                return new Promise(function (resolve) { setTimeout(resolve, 1500); }).then(function () {
+                  return attempt(i, allNotFound, true);
+                });
+              }
+              if ((st === 404 || isServerBusy(st)) && i + 1 < candidates.length) {
+                return attempt(i + 1, allNotFound && st === 404, false);
+              }
+              err.model = candidates[i];
+              throw err;
+            }
+          );
+        }
+        return attempt(0, true, false);
+      }
+
+            function describeGeminiError(err, model) {
         if (navigator.onLine === false) {
           return 'Du bist offline. Der Foto-Scan braucht Internet.';
         }
@@ -2901,7 +2944,10 @@
           return 'Die Anfrage wurde abgelehnt (HTTP ' + st + '). Meist ist der API-Key ungültig – bitte unter "Ziele & Backup" prüfen.';
         }
         if (st === 404) {
-          return 'Das Modell "' + model + '" wurde nicht gefunden (HTTP 404). Bitte den Modellnamen unter "Ziele & Backup" prüfen.';
+          return 'Kein passendes Gemini-Modell gefunden (zuletzt probiert: "' + model + '", HTTP 404). Bitte unter "Ziele & Backup" einen aktuellen Modellnamen aus Google AI Studio eintragen.';
+        }
+        if (isServerBusy(st)) {
+          return 'Die Gemini-Server sind gerade überlastet oder nicht erreichbar (HTTP ' + st + '). Das ist meist nur kurz – bitte in ein paar Sekunden erneut versuchen.';
         }
         if (st === 429) {
           return 'Das Anfragelimit von Gemini ist erreicht (HTTP 429). Bitte kurz warten und erneut versuchen.';
@@ -2936,8 +2982,14 @@
           'kcal (NUR Kilokalorien kcal, IGNORIERE kJ komplett!), ' +
           'fett (Fett in g), kh (Kohlenhydrate in g), zucker (davon Zucker in g) und ew (Eiweiß/Protein in g).';
 
-        callGeminiEndpoint(key, model, prompt, scanObj.base64)
-          .then(function (json) {
+        callGeminiWithFallback(key, model, prompt, scanObj.base64)
+          .then(function (result) {
+            var json = result.json;
+            if (result.persist) {
+              appState.geminiModel = result.model;
+              saveState(appState);
+              showToast('Gemini-Modell automatisch auf "' + result.model + '" umgestellt.');
+            }
             var rawText = json && json.candidates && json.candidates[0] &&
               json.candidates[0].content && json.candidates[0].content.parts &&
               json.candidates[0].content.parts[0] && json.candidates[0].content.parts[0].text;
@@ -2948,7 +3000,7 @@
           })
           .catch(function (err) {
             showScanNotice(
-              'Foto wurde geladen! ' + describeGeminiError(err, model) + ' Du kannst es oben erneut versuchen oder die Werte darunter eintragen.',
+              'Foto wurde geladen! ' + describeGeminiError(err, err.model || model) + ' Du kannst es oben erneut versuchen oder die Werte darunter eintragen.',
               'info'
             );
           });
@@ -3525,23 +3577,55 @@
           notice.textContent = 'Teste Verbindung zu ' + model + '…';
           notice.classList.remove('hidden');
 
-          var testUrl = 'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent?key=' + encodeURIComponent(key);
-          fetch(testUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: 'Antworte mit OK' }] }]
-            })
-          }).then(function (res) {
-            if (res.ok) {
+          var candidates = geminiCandidates(model);
+          function testModel(i, allNotFound, retried) {
+            var testUrl = 'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(candidates[i]) + ':generateContent?key=' + encodeURIComponent(key);
+            return fetch(testUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: 'Antworte mit OK' }] }]
+              })
+            }).then(function (res) {
+              var st = res.status;
+              if (isServerBusy(st) && !retried) {
+                return new Promise(function (resolve) { setTimeout(resolve, 1500); }).then(function () {
+                  return testModel(i, allNotFound, true);
+                });
+              }
+              if ((st === 404 || isServerBusy(st)) && i + 1 < candidates.length) {
+                return testModel(i + 1, allNotFound && st === 404, false);
+              }
+              return { status: st, model: candidates[i], persist: allNotFound && i > 0 };
+            });
+          }
+
+          testModel(0, true, false).then(function (r) {
+            if (r.status >= 200 && r.status < 300) {
               notice.className = 'notice-box notice-success';
-              notice.textContent = 'Verbindung erfolgreich! ' + model + ' ist einsatzbereit.';
-            } else if (res.status === 404) {
-              notice.className = 'notice-box notice-error';
-              notice.textContent = 'Das Modell "' + model + '" wurde nicht gefunden (HTTP 404). Bitte den Modellnamen prüfen.';
+              if (r.persist) {
+                appState.geminiModel = r.model;
+                saveState(appState);
+                document.getElementById('gemini-model-input').value = r.model;
+                notice.textContent = 'Verbindung erfolgreich! "' + model + '" ist nicht verfügbar – automatisch auf "' + r.model + '" umgestellt und gespeichert.';
+              } else if (r.model !== model) {
+                notice.textContent = 'Verbindung erfolgreich, aber "' + model + '" ist gerade überlastet. Zum Test hat "' + r.model + '" geantwortet – dein Modell bleibt unverändert.';
+              } else {
+                notice.textContent = 'Verbindung erfolgreich! ' + r.model + ' ist einsatzbereit.';
+              }
             } else {
               notice.className = 'notice-box notice-error';
-              notice.textContent = 'Antwort HTTP ' + res.status + ': Bitte einen gültigen Google Gemini API-Key eintragen.';
+              if (r.status === 404) {
+                notice.textContent = 'Kein passendes Gemini-Modell gefunden (HTTP 404). Bitte einen aktuellen Modellnamen aus Google AI Studio eintragen.';
+              } else if (isServerBusy(r.status)) {
+                notice.textContent = 'Die Gemini-Server sind gerade überlastet (HTTP ' + r.status + '). Dein Key ist wahrscheinlich in Ordnung – bitte in ein paar Minuten erneut testen.';
+              } else if (r.status === 429) {
+                notice.textContent = 'Das Anfragelimit von Gemini ist erreicht (HTTP 429). Bitte kurz warten und erneut testen.';
+              } else if (r.status === 400 || r.status === 401 || r.status === 403) {
+                notice.textContent = 'Antwort HTTP ' + r.status + ': Der API-Key wurde abgelehnt. Bitte einen gültigen Google Gemini API-Key eintragen.';
+              } else {
+                notice.textContent = 'Unerwartete Antwort von Gemini (HTTP ' + r.status + ').';
+              }
             }
           }).catch(function () {
             notice.className = 'notice-box notice-error';

@@ -37,7 +37,7 @@ Die lokalen Daten hängen an der Adresse der Seite. Auf der neuen Adresse starte
 
 Unter *Ziele & Backup → Gemini Vision API-Key* den eigenen Key (kostenlos in Google AI Studio) eintragen und mit *Verbindung testen* prüfen. Der Key liegt nur in diesem Browser und ist im JSON-Backup enthalten – Backups deshalb nicht weitergeben. Der Scan braucht Internet, alles andere funktioniert offline.
 
-Falls Google das Standardmodell einmal abkündigt, den Modellnamen im gleichen Bereich ändern (Standard: `gemini-2.5-flash`).
+Standardmodell ist `gemini-3.8-flash`. Meldet Google „Modell nicht gefunden“ (HTTP 404), probiert die App automatisch aktuelle Alternativen durch und merkt sich das funktionierende Modell. Bei Bedarf lässt sich der Modellname im gleichen Bereich von Hand ändern.
 
 ## Updates einspielen
 
