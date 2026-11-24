@@ -1,9 +1,9 @@
-/* Service Worker – Essensplan Tracker
+/* Service Worker – Food for Fit
  * Strategie: Stale-while-revalidate für alle Dateien der App (gleiche Herkunft).
  * Die App startet sofort aus dem Cache, im Hintergrund wird die neueste Version geholt.
  * Anfragen an andere Server (Gemini API) werden nicht angefasst.
  */
-var CACHE = 'essensplan-v1';
+var CACHE = 'food-for-fit-v1';
 var ASSETS = [
   './',
   'index.html',

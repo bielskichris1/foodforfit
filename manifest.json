@@ -1,7 +1,7 @@
 {
   "id": "./",
-  "name": "Essensplan Tracker",
-  "short_name": "Essensplan",
+  "name": "Food for Fit",
+  "short_name": "Food for Fit",
   "description": "Kalorien- und Makro-Tracker mit Foto-Scan für Nährwerttabellen",
   "lang": "de",
   "dir": "ltr",
